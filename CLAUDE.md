@@ -32,7 +32,7 @@ Fonctionnalités V1 visées (au-delà du slice actuel) : carte interactive (trac
 | CI/CD | GitHub Actions |
 | Monitoring | Sentry |
 
-**État actuel du repo** : monorepo pnpm + Turborepo avec `packages/domain` (coeur métier DDD) et `packages/backend` (Express/Prisma). `packages/web` et `packages/mobile` n'existent pas encore — à scaffolder dans une passe suivante.
+**État actuel du repo** : monorepo pnpm + Turborepo avec `packages/domain` (coeur métier DDD), `packages/backend` (Express/Prisma), `packages/web` (Vite + React + Tailwind v4 + shadcn/ui + TanStack Query) et `packages/mobile` (Expo + React Native + TanStack Query). Web et mobile appellent chacun `GET /api/health` sur le backend via un hook `useHealth` (preuve de connectivité bout-en-bout) ; ni l'un ni l'autre n'a encore de logique métier — le domaine (agrégat `Trip`) n'est consommé pour l'instant que par le backend.
 
 ## Décisions architecturales (non négociables)
 
@@ -63,9 +63,23 @@ packages/
       adapters/persistence/ # implémentations Prisma des ports du domaine
       infrastructure/       # bootstrap app/serveur, client Prisma
     prisma/schema.prisma
+  web/        # Vite + React + TS (strict) + Tailwind v4 + shadcn/ui + TanStack Query
+    src/
+      components/ui/   # composants shadcn (copiés, pas de logique métier)
+      hooks/            # hooks TanStack Query, ex: useHealth — __tests__/ avec Vitest + Testing Library
+      lib/              # utils.ts (cn), apiClient.ts (VITE_API_URL)
+  mobile/     # Expo + React Native + TS (strict) + TanStack Query
+    src/
+      hooks/            # même pattern que web — __tests__/ avec jest-expo + Testing Library
+      lib/              # apiClient.ts (EXPO_PUBLIC_API_URL)
+    App.tsx importé depuis index.ts (registerRootComponent)
 ```
 
 Règle : un nouvel adapter d'infra (Prisma, HTTP, etc.) va dans `backend/src/adapters/`, jamais dans `domain`. Un nouvel adapter **sans dépendance externe réelle** (in-memory, fake) peut vivre dans `domain` à côté du port qu'il implémente, car il ne viole pas la pureté du domaine.
+
+Web et mobile n'importent pas encore `@voyagin/domain` directement (ils ne font que de l'appel HTTP via des hooks TanStack Query). Le jour où une vraie logique métier doit être partagée entre eux (validation de formulaire, formatage d'un agrégat, etc.), envisager un `packages/shared` plutôt que de dupliquer — ne pas le créer avant d'en avoir un besoin réel.
+
+`packages/mobile` contient un `AGENTS.md` généré par Expo (`@AGENTS.md` référencé depuis son propre `CLAUDE.md`) qui rappelle de vérifier la doc versionnée du SDK Expo installé avant d'écrire du code RN — le lire avant de toucher à du code mobile spécifique à l'API Expo.
 
 ## Commandes
 
@@ -79,6 +93,12 @@ cd packages/backend
 npx prisma generate               # après toute modif de prisma/schema.prisma
 npx prisma migrate dev            # nécessite DATABASE_URL (voir docker-compose.yml)
 pnpm dev                          # lance le serveur (ts-node-dev)
+
+# Web seul (attend le backend sur http://localhost:3000, voir packages/web/.env.example)
+pnpm --filter @voyagin/web dev
+
+# Mobile seul (Expo — voir packages/mobile/.env.example pour EXPO_PUBLIC_API_URL)
+pnpm --filter @voyagin/mobile start
 ```
 
 Un `docker-compose.yml` à la racine fournit un Postgres local (`voyagin`/`voyagin`) pour le dev — non démarré automatiquement.
