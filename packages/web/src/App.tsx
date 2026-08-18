@@ -1,28 +1,26 @@
-import { Button } from '@/components/ui/button'
-import { useHealth } from '@/hooks/useHealth'
-
-function ApiStatus() {
-  const health = useHealth()
-
-  if (health.isPending) {
-    return <p className="text-sm text-muted-foreground">Connexion à l'API…</p>
-  }
-
-  if (health.isError) {
-    return <p className="text-sm text-destructive">API injoignable : {health.error.message}</p>
-  }
-
-  return <p className="text-sm text-muted-foreground">API : {health.data.status}</p>
-}
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from '@/hooks/useAuth'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { LoginPage } from '@/pages/LoginPage'
+import { RegisterPage } from '@/pages/RegisterPage'
+import { TripsPage } from '@/pages/TripsPage'
+import { TripDetailPage } from '@/pages/TripDetailPage'
+import { AccountPage } from '@/pages/AccountPage'
 
 function App() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold">VoyagIn</h1>
-      <p className="text-muted-foreground">Le carnet de voyage collaboratif en temps réel.</p>
-      <ApiStatus />
-      <Button>Commencer un voyage</Button>
-    </main>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<TripsPage />} />
+          <Route path="/trips/:id" element={<TripDetailPage />} />
+          <Route path="/account" element={<AccountPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AuthProvider>
   )
 }
 
