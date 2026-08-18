@@ -1,7 +1,11 @@
 import { Trip } from '../Trip';
 import { Participant } from '../Participant';
 import { DateRange } from '../DateRange';
-import { InvalidTripNameError, DuplicateParticipantError } from '../errors';
+import {
+  InvalidTripNameError,
+  DuplicateParticipantError,
+  NotTripOwnerError,
+} from '../errors';
 
 describe('Trip', () => {
   const baseProps = { name: 'Bali sabbatical', ownerId: 'user-1', ownerName: 'Alex' };
@@ -82,18 +86,66 @@ describe('Trip', () => {
   });
 
   describe('adjustDateRange', () => {
-    it('lets the group set dates once the trip is underway', () => {
+    it('lets the owner set dates once the trip is underway', () => {
       const trip = Trip.create(baseProps);
       const dateRange = DateRange.create(new Date('2026-09-01'), new Date('2026-09-15'));
-      trip.adjustDateRange(dateRange);
+      trip.adjustDateRange(dateRange, baseProps.ownerId);
       expect(trip.getDateRange()).toBe(dateRange);
     });
 
-    it('lets the group clear fixed dates to keep improvising', () => {
+    it('lets the owner clear fixed dates to keep improvising', () => {
       const dateRange = DateRange.create(new Date('2026-09-01'), new Date('2026-09-15'));
       const trip = Trip.create({ ...baseProps, dateRange });
-      trip.adjustDateRange(undefined);
+      trip.adjustDateRange(undefined, baseProps.ownerId);
       expect(trip.getDateRange()).toBeUndefined();
+    });
+
+    it('rejects a date change requested by someone who is not the owner', () => {
+      const trip = Trip.create(baseProps);
+      trip.addParticipant(Participant.create('user-2', 'Sam'));
+      const dateRange = DateRange.create(new Date('2026-09-01'), new Date('2026-09-15'));
+
+      expect(() => trip.adjustDateRange(dateRange, 'user-2')).toThrow(NotTripOwnerError);
+      expect(trip.getDateRange()).toBeUndefined();
+    });
+  });
+
+  describe('rename', () => {
+    it('lets the owner rename the trip', () => {
+      const trip = Trip.create(baseProps);
+      trip.rename('Bali honeymoon', baseProps.ownerId);
+      expect(trip.getName()).toBe('Bali honeymoon');
+    });
+
+    it('rejects an empty new name', () => {
+      const trip = Trip.create(baseProps);
+      expect(() => trip.rename('   ', baseProps.ownerId)).toThrow(InvalidTripNameError);
+    });
+
+    it('rejects a rename requested by someone who is not the owner', () => {
+      const trip = Trip.create(baseProps);
+      trip.addParticipant(Participant.create('user-2', 'Sam'));
+
+      expect(() => trip.rename('Bali honeymoon', 'user-2')).toThrow(NotTripOwnerError);
+      expect(trip.getName()).toBe('Bali sabbatical');
+    });
+  });
+
+  describe('isOwnedBy', () => {
+    it('returns true for the trip owner', () => {
+      const trip = Trip.create(baseProps);
+      expect(trip.isOwnedBy(baseProps.ownerId)).toBe(true);
+    });
+
+    it('returns false for a participant who is not the owner', () => {
+      const trip = Trip.create(baseProps);
+      trip.addParticipant(Participant.create('user-2', 'Sam'));
+      expect(trip.isOwnedBy('user-2')).toBe(false);
+    });
+
+    it('returns false for someone who has not joined the trip', () => {
+      const trip = Trip.create(baseProps);
+      expect(trip.isOwnedBy('stranger')).toBe(false);
     });
   });
 });

@@ -1,5 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { DateRange, Trip, TripId, TripRepository } from '@voyagin/domain';
+
+type TripWithParticipants = Prisma.TripGetPayload<{ include: { participants: true } }>;
 
 export class PrismaTripRepository implements TripRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -36,10 +38,23 @@ export class PrismaTripRepository implements TripRepository {
       include: { participants: true },
     });
 
-    if (!record) {
-      return null;
-    }
+    return record ? this.toDomain(record) : null;
+  }
 
+  async findByParticipant(userId: string): Promise<Trip[]> {
+    const records = await this.prisma.trip.findMany({
+      where: { participants: { some: { userId } } },
+      include: { participants: true },
+    });
+
+    return records.map((record) => this.toDomain(record));
+  }
+
+  async delete(id: TripId): Promise<void> {
+    await this.prisma.trip.delete({ where: { id: id.toString() } });
+  }
+
+  private toDomain(record: TripWithParticipants): Trip {
     const dateRange =
       record.startDate && record.endDate
         ? DateRange.create(record.startDate, record.endDate)
