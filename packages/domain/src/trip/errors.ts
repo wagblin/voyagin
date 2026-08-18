@@ -20,3 +20,17 @@ export class DuplicateParticipantError extends Error {
     this.name = 'DuplicateParticipantError';
   }
 }
+
+export class TripNotFoundError extends Error {
+  constructor(tripId: string) {
+    super(`Trip ${tripId} was not found.`);
+    this.name = 'TripNotFoundError';
+  }
+}
+
+export class NotTripOwnerError extends Error {
+  constructor(userId: string) {
+    super(`${userId} is not the owner of this trip and cannot modify it.`);
+    this.name = 'NotTripOwnerError';
+  }
+}

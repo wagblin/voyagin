@@ -13,4 +13,16 @@ export class InMemoryTripRepository implements TripRepository {
   findById(id: TripId): Promise<Trip | null> {
     return Promise.resolve(this.trips.get(id.toString()) ?? null);
   }
+
+  findByParticipant(userId: string): Promise<Trip[]> {
+    const trips = [...this.trips.values()].filter((trip) =>
+      trip.getParticipants().some((participant) => participant.userId === userId),
+    );
+    return Promise.resolve(trips);
+  }
+
+  delete(id: TripId): Promise<void> {
+    this.trips.delete(id.toString());
+    return Promise.resolve();
+  }
 }

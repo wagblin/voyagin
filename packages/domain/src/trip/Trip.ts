@@ -1,7 +1,7 @@
 import { TripId } from './TripId';
 import { DateRange } from './DateRange';
 import { Participant } from './Participant';
-import { InvalidTripNameError, DuplicateParticipantError } from './errors';
+import { InvalidTripNameError, DuplicateParticipantError, NotTripOwnerError } from './errors';
 
 export interface CreateTripProps {
   name: string;
@@ -52,8 +52,22 @@ export class Trip {
     this.participants.push(participant);
   }
 
-  adjustDateRange(dateRange: DateRange | undefined): void {
+  adjustDateRange(dateRange: DateRange | undefined, requesterId: string): void {
+    this.assertOwnedBy(requesterId);
     this.dateRange = dateRange;
+  }
+
+  rename(newName: string, requesterId: string): void {
+    this.assertOwnedBy(requesterId);
+    const trimmedName = newName.trim();
+    if (trimmedName.length === 0) {
+      throw new InvalidTripNameError();
+    }
+    this.name = trimmedName;
+  }
+
+  isOwnedBy(userId: string): boolean {
+    return this.participants.some((participant) => participant.isOwner() && participant.userId === userId);
   }
 
   getName(): string {
@@ -66,5 +80,11 @@ export class Trip {
 
   getDateRange(): DateRange | undefined {
     return this.dateRange;
+  }
+
+  private assertOwnedBy(requesterId: string): void {
+    if (!this.isOwnedBy(requesterId)) {
+      throw new NotTripOwnerError(requesterId);
+    }
   }
 }

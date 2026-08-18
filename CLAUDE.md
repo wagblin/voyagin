@@ -103,6 +103,17 @@ pnpm --filter @voyagin/mobile start
 
 Un `docker-compose.yml` à la racine fournit un Postgres local (`voyagin`/`voyagin`) pour le dev — non démarré automatiquement.
 
+### Tester depuis un téléphone/tablette physique sur le même Wi-Fi
+
+`localhost` dans `packages/web/.env` (`VITE_API_URL`) ou `packages/mobile/.env` (`EXPO_PUBLIC_API_URL`) désigne l'appareil qui exécute le navigateur/l'app — pas la machine de dev. Pour tester depuis un iPhone/iPad :
+1. Récupérer l'IP LAN de la machine de dev : `ipconfig getifaddr en0` (Wi-Fi, macOS).
+2. Mettre cette IP dans `VITE_API_URL` / `EXPO_PUBLIC_API_URL` (au lieu de `localhost`), puis relancer web/mobile.
+3. Lancer le backend avec `HOST=0.0.0.0` (déjà la valeur par défaut dans `server.ts`) et Vite avec `--host 0.0.0.0` pour qu'ils écoutent sur toutes les interfaces, pas seulement `127.0.0.1`.
+4. Expo (`expo start`) et Prisma Studio (`prisma studio`) écoutent déjà sur toutes les interfaces par défaut.
+5. Expo Go (App Store) ne supporte que la dernière version de SDK Expo publiée — si `expo start` affiche "Project is incompatible with this version of Expo Go", c'est que le SDK du projet est plus récent que ce que Expo Go supporte : rétrograder (`npx expo install expo@^<version>` puis `npx expo install --fix`) plutôt que d'attendre une mise à jour de l'app.
+
+L'IP change selon le réseau — la reconfirmer (`ipconfig getifaddr en0`) si le Wi-Fi change.
+
 ## Workflow à 2 agents Claude Code
 
 Deux subagents dans `.claude/agents/` reproduisent le mode de travail décrit par l'utilisateur :

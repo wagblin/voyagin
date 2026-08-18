@@ -30,3 +30,14 @@ model Participant {
   @@unique([tripId, userId])
   @@map("participants")
 }
+
+model User {
+  id             String   @id
+  email          String   @unique
+  name           String
+  hashedPassword String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("users")
+}
