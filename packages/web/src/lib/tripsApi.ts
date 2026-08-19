@@ -48,3 +48,16 @@ export function updateTrip(id: string, input: UpdateTripInput): Promise<Trip> {
 export function deleteTrip(id: string): Promise<void> {
   return authorizedFetch<void>(`/api/trips/${id}`, { method: 'DELETE' })
 }
+
+export function addParticipant(tripId: string, email: string): Promise<Trip> {
+  return authorizedFetch<Trip>(`/api/trips/${tripId}/participants`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function removeParticipant(tripId: string, userId: string): Promise<Trip> {
+  return authorizedFetch<Trip>(`/api/trips/${tripId}/participants/${userId}`, {
+    method: 'DELETE',
+  })
+}

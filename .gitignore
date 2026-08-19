@@ -16,3 +16,4 @@ coverage/
 !.vscode/extensions.json
 ios/
 android/
+.dev/

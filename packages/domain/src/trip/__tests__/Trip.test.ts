@@ -5,6 +5,8 @@ import {
   InvalidTripNameError,
   DuplicateParticipantError,
   NotTripOwnerError,
+  ParticipantNotFoundError,
+  CannotRemoveOwnerError,
 } from '../errors';
 
 describe('Trip', () => {
@@ -42,16 +44,66 @@ describe('Trip', () => {
   describe('addParticipant', () => {
     it('adds a new participant to the trip', () => {
       const trip = Trip.create(baseProps);
-      trip.addParticipant(Participant.create('user-2', 'Sam'));
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
       expect(trip.getParticipants()).toHaveLength(2);
     });
 
     it('rejects a participant who already joined the trip', () => {
       const trip = Trip.create(baseProps);
-      trip.addParticipant(Participant.create('user-2', 'Sam'));
-      expect(() => trip.addParticipant(Participant.create('user-2', 'Sam'))).toThrow(
-        DuplicateParticipantError,
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
+      expect(() =>
+        trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId),
+      ).toThrow(DuplicateParticipantError);
+    });
+
+    it('rejects a participant added by someone who is not the owner', () => {
+      const trip = Trip.create(baseProps);
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
+
+      expect(() =>
+        trip.addParticipant(Participant.create('user-3', 'Jamie'), 'user-2'),
+      ).toThrow(NotTripOwnerError);
+      expect(trip.getParticipants()).toHaveLength(2);
+    });
+  });
+
+  describe('removeParticipant', () => {
+    it('lets the owner remove a participant from the trip', () => {
+      const trip = Trip.create(baseProps);
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
+
+      trip.removeParticipant('user-2', baseProps.ownerId);
+
+      expect(trip.getParticipants()).toHaveLength(1);
+      expect(trip.getParticipants().some((participant) => participant.userId === 'user-2')).toBe(
+        false,
       );
+    });
+
+    it('rejects a removal requested by someone who is not the owner', () => {
+      const trip = Trip.create(baseProps);
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
+      trip.addParticipant(Participant.create('user-3', 'Jamie'), baseProps.ownerId);
+
+      expect(() => trip.removeParticipant('user-3', 'user-2')).toThrow(NotTripOwnerError);
+      expect(trip.getParticipants()).toHaveLength(3);
+    });
+
+    it('rejects removing someone who never joined the trip', () => {
+      const trip = Trip.create(baseProps);
+
+      expect(() => trip.removeParticipant('stranger', baseProps.ownerId)).toThrow(
+        ParticipantNotFoundError,
+      );
+    });
+
+    it('rejects removing the owner from their own trip', () => {
+      const trip = Trip.create(baseProps);
+
+      expect(() => trip.removeParticipant(baseProps.ownerId, baseProps.ownerId)).toThrow(
+        CannotRemoveOwnerError,
+      );
+      expect(trip.getParticipants()).toHaveLength(1);
     });
   });
 
@@ -102,7 +154,7 @@ describe('Trip', () => {
 
     it('rejects a date change requested by someone who is not the owner', () => {
       const trip = Trip.create(baseProps);
-      trip.addParticipant(Participant.create('user-2', 'Sam'));
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
       const dateRange = DateRange.create(new Date('2026-09-01'), new Date('2026-09-15'));
 
       expect(() => trip.adjustDateRange(dateRange, 'user-2')).toThrow(NotTripOwnerError);
@@ -124,7 +176,7 @@ describe('Trip', () => {
 
     it('rejects a rename requested by someone who is not the owner', () => {
       const trip = Trip.create(baseProps);
-      trip.addParticipant(Participant.create('user-2', 'Sam'));
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
 
       expect(() => trip.rename('Bali honeymoon', 'user-2')).toThrow(NotTripOwnerError);
       expect(trip.getName()).toBe('Bali sabbatical');
@@ -139,7 +191,7 @@ describe('Trip', () => {
 
     it('returns false for a participant who is not the owner', () => {
       const trip = Trip.create(baseProps);
-      trip.addParticipant(Participant.create('user-2', 'Sam'));
+      trip.addParticipant(Participant.create('user-2', 'Sam'), baseProps.ownerId);
       expect(trip.isOwnedBy('user-2')).toBe(false);
     });
 

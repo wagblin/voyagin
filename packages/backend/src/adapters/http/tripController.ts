@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import {
+  AddParticipantToTripUseCase,
   CreateTripUseCase,
   DateRange,
   DeleteTripUseCase,
+  RemoveParticipantFromTripUseCase,
   TripId,
   TripRepository,
   UpdateTripUseCase,
@@ -21,6 +23,10 @@ const updateTripSchema = z.object({
   name: z.string().trim().min(1).optional(),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
+});
+
+const addParticipantSchema = z.object({
+  email: z.string().trim().email('A valid email is required.'),
 });
 
 export interface TripControllerDependencies {
@@ -101,5 +107,41 @@ export function buildTripController(deps: TripControllerDependencies) {
     res.status(204).send();
   });
 
-  return { createTrip, listMyTrips, getTrip, updateTrip, deleteTrip };
+  const addParticipant = asyncHandler(async (req, res) => {
+    const parsed = addParticipantSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
+    const useCase = new AddParticipantToTripUseCase(deps.tripRepository, deps.userRepository);
+    const trip = await useCase.execute({
+      tripId: req.params['id']!,
+      requesterId: req.userId as string,
+      participantEmail: parsed.data.email,
+    });
+
+    res.status(201).json(serializeTrip(trip));
+  });
+
+  const removeParticipant = asyncHandler(async (req, res) => {
+    const useCase = new RemoveParticipantFromTripUseCase(deps.tripRepository);
+    const trip = await useCase.execute({
+      tripId: req.params['id']!,
+      requesterId: req.userId as string,
+      participantUserId: req.params['userId']!,
+    });
+
+    res.status(200).json(serializeTrip(trip));
+  });
+
+  return {
+    createTrip,
+    listMyTrips,
+    getTrip,
+    updateTrip,
+    deleteTrip,
+    addParticipant,
+    removeParticipant,
+  };
 }

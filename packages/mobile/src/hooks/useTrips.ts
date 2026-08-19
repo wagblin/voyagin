@@ -6,10 +6,12 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import {
+  addParticipant,
   createTrip,
   deleteTrip,
   getTrip,
   listTrips,
+  removeParticipant,
   updateTrip,
   type CreateTripInput,
   type Trip,
@@ -52,6 +54,28 @@ export function useDeleteTripMutation(): UseMutationResult<void, Error, string> 
   return useMutation({
     mutationFn: deleteTrip,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: tripsQueryKey });
+    },
+  });
+}
+
+export function useAddParticipantMutation(tripId: string): UseMutationResult<Trip, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) => addParticipant(tripId, email),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: tripQueryKey(tripId) });
+      void queryClient.invalidateQueries({ queryKey: tripsQueryKey });
+    },
+  });
+}
+
+export function useRemoveParticipantMutation(tripId: string): UseMutationResult<Trip, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => removeParticipant(tripId, userId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: tripQueryKey(tripId) });
       void queryClient.invalidateQueries({ queryKey: tripsQueryKey });
     },
   });

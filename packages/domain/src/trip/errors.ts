@@ -34,3 +34,17 @@ export class NotTripOwnerError extends Error {
     this.name = 'NotTripOwnerError';
   }
 }
+
+export class ParticipantNotFoundError extends Error {
+  constructor(userId: string) {
+    super(`Participant ${userId} was not found on this trip.`);
+    this.name = 'ParticipantNotFoundError';
+  }
+}
+
+export class CannotRemoveOwnerError extends Error {
+  constructor(userId: string) {
+    super(`Owner ${userId} cannot be removed from their own trip.`);
+    this.name = 'CannotRemoveOwnerError';
+  }
+}

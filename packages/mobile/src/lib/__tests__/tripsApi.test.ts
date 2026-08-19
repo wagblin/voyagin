@@ -1,4 +1,13 @@
-import { listTrips, getTrip, createTrip, updateTrip, deleteTrip, type Trip } from '../tripsApi';
+import {
+  listTrips,
+  getTrip,
+  createTrip,
+  updateTrip,
+  deleteTrip,
+  addParticipant,
+  removeParticipant,
+  type Trip,
+} from '../tripsApi';
 
 jest.mock('../authStorage', () => ({
   getToken: jest.fn().mockResolvedValue('test-token'),
@@ -92,6 +101,39 @@ describe('tripsApi', () => {
       mockFetchOnce({ ok: false, status: 404, json: () => Promise.resolve({ error: 'Trip not found' }) });
 
       await expect(deleteTrip('missing')).rejects.toThrow('Trip not found');
+    });
+  });
+
+  describe('addParticipant', () => {
+    it('resolves with the updated trip', async () => {
+      const updated = {
+        ...sampleTrip,
+        participants: [...sampleTrip.participants, { userId: 'user-2', name: 'Bob', role: 'member' as const }],
+      };
+      mockFetchOnce({ ok: true, json: () => Promise.resolve(updated) });
+
+      await expect(addParticipant('trip-1', 'bob@example.com')).resolves.toEqual(updated);
+    });
+
+    it('throws when no account matches the email', async () => {
+      mockFetchOnce({ ok: false, status: 404, json: () => Promise.resolve({ error: 'User not found' }) });
+
+      await expect(addParticipant('trip-1', 'unknown@example.com')).rejects.toThrow('User not found');
+    });
+  });
+
+  describe('removeParticipant', () => {
+    it('resolves with the updated trip', async () => {
+      const updated = { ...sampleTrip, participants: [] };
+      mockFetchOnce({ ok: true, json: () => Promise.resolve(updated) });
+
+      await expect(removeParticipant('trip-1', 'user-2')).resolves.toEqual(updated);
+    });
+
+    it('throws when attempting to remove the owner', async () => {
+      mockFetchOnce({ ok: false, status: 409, json: () => Promise.resolve({ error: 'Cannot remove owner' }) });
+
+      await expect(removeParticipant('trip-1', 'user-1')).rejects.toThrow('Cannot remove owner');
     });
   });
 });

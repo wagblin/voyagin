@@ -32,7 +32,7 @@ Fonctionnalités V1 visées (au-delà du slice actuel) : carte interactive (trac
 | CI/CD | GitHub Actions |
 | Monitoring | Sentry |
 
-**État actuel du repo** : monorepo pnpm + Turborepo avec `packages/domain` (coeur métier DDD), `packages/backend` (Express/Prisma), `packages/web` (Vite + React + Tailwind v4 + shadcn/ui + TanStack Query) et `packages/mobile` (Expo + React Native + TanStack Query). Web et mobile appellent chacun `GET /api/health` sur le backend via un hook `useHealth` (preuve de connectivité bout-en-bout) ; ni l'un ni l'autre n'a encore de logique métier — le domaine (agrégat `Trip`) n'est consommé pour l'instant que par le backend.
+**État actuel du repo** : monorepo pnpm + Turborepo avec `packages/domain` (coeur métier DDD — agrégats `Trip` et `User`), `packages/backend` (Express/Prisma, JWT, doc OpenAPI sur `/api-docs`), `packages/web` (Vite + React + Tailwind v4 + shadcn/ui + TanStack Query) et `packages/mobile` (Expo + React Native + TanStack Query). Fonctionnalités livrées bout-en-bout (domaine → API → web → mobile) : comptes utilisateurs (inscription/connexion/déconnexion/modification/suppression) et voyages (création/consultation/modification/suppression/gestion des participants). Web et mobile n'importent pas encore `@voyagin/domain` directement, ils consomment l'API HTTP via des hooks TanStack Query.
 
 ## Décisions architecturales (non négociables)
 
@@ -43,6 +43,7 @@ Fonctionnalités V1 visées (au-delà du slice actuel) : carte interactive (trac
 - **TDD strict — Red → Green → Refactor** : toujours écrire le test avant le code de production. Ne jamais écrire de code d'implémentation sans un test en échec qui le justifie. **100% de couverture sur `packages/domain`** (`coverageThreshold` configuré dans `jest.config.ts`, échoue le build sinon).
 - **Hors-ligne d'abord** avec PowerSync (à intégrer lors du scaffold mobile/web).
 - Pas de raccourcis "temporaires", pas d'abstraction anticipée sur des besoins hypothétiques.
+- **Documentation tenue à jour** : `README.md` (racine) et la section "État actuel du repo" ci-dessus doivent refléter les fonctionnalités réellement livrées. Toute tâche qui ajoute un endpoint, un package, une commande ou change la façon de lancer le projet n'est terminée que lorsque `README.md` et ce fichier sont mis à jour en conséquence — ne pas attendre qu'on le demande explicitement.
 
 ## Structure des packages
 
@@ -105,14 +106,11 @@ Un `docker-compose.yml` à la racine fournit un Postgres local (`voyagin`/`voyag
 
 ### Tester depuis un téléphone/tablette physique sur le même Wi-Fi
 
-`localhost` dans `packages/web/.env` (`VITE_API_URL`) ou `packages/mobile/.env` (`EXPO_PUBLIC_API_URL`) désigne l'appareil qui exécute le navigateur/l'app — pas la machine de dev. Pour tester depuis un iPhone/iPad :
-1. Récupérer l'IP LAN de la machine de dev : `ipconfig getifaddr en0` (Wi-Fi, macOS).
-2. Mettre cette IP dans `VITE_API_URL` / `EXPO_PUBLIC_API_URL` (au lieu de `localhost`), puis relancer web/mobile.
-3. Lancer le backend avec `HOST=0.0.0.0` (déjà la valeur par défaut dans `server.ts`) et Vite avec `--host 0.0.0.0` pour qu'ils écoutent sur toutes les interfaces, pas seulement `127.0.0.1`.
-4. Expo (`expo start`) et Prisma Studio (`prisma studio`) écoutent déjà sur toutes les interfaces par défaut.
-5. Expo Go (App Store) ne supporte que la dernière version de SDK Expo publiée — si `expo start` affiche "Project is incompatible with this version of Expo Go", c'est que le SDK du projet est plus récent que ce que Expo Go supporte : rétrograder (`npx expo install expo@^<version>` puis `npx expo install --fix`) plutôt que d'attendre une mise à jour de l'app.
+`localhost` dans `packages/web/.env` (`VITE_API_URL`) ou `packages/mobile/.env` (`EXPO_PUBLIC_API_URL`) désigne l'appareil qui exécute le navigateur/l'app — pas la machine de dev, et l'IP change à chaque changement de réseau Wi-Fi.
 
-L'IP change selon le réseau — la reconfirmer (`ipconfig getifaddr en0`) si le Wi-Fi change.
+**`./scripts/dev-up.sh`** (ou `pnpm dev:lan`) automatise tout ça : détecte l'IP Wi-Fi actuelle (`ipconfig getifaddr en0`, fallback `en1`), compare à la valeur déjà présente dans `packages/web/.env`, réécrit `VITE_API_URL`/`EXPO_PUBLIC_API_URL` si elle a changé, tue tout ce qui écoute déjà sur les ports 3000/5173/8081/5555, puis relance Postgres (docker compose), le backend (`HOST=0.0.0.0` par défaut dans `server.ts`), Vite (`--host 0.0.0.0`), Expo et Prisma Studio en arrière-plan (logs dans `.dev/logs/`). Si l'IP a changé, il vide aussi le cache Metro (`expo start -c`) pour forcer le rechargement du bundle sur le téléphone. À relancer à chaque fois que le Wi-Fi change — c'est idempotent.
+
+Point d'attention non automatisable : Expo Go (App Store) ne supporte que la dernière version de SDK Expo publiée — si l'app affiche "Project is incompatible with this version of Expo Go", c'est que le SDK du projet (`packages/mobile/package.json`, dépendance `expo`) est plus récent que ce que Expo Go supporte : rétrograder (`npx expo install expo@^<version>` puis `npx expo install --fix`) plutôt que d'attendre une mise à jour de l'app — voir `packages/mobile/AGENTS.md` pour la version actuellement pinnée et pourquoi.
 
 ## Workflow à 2 agents Claude Code
 

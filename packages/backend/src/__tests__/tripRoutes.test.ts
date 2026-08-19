@@ -205,3 +205,158 @@ describe('DELETE /api/trips/:id', () => {
     expect(response.status).toBe(403);
   });
 });
+
+describe('POST /api/trips/:id/participants', () => {
+  it('adds an existing user as a participant of the trip', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    await registerAndGetToken(app, 'bob@example.com', 'Bob');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+
+    const response = await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: 'bob@example.com' });
+
+    expect(response.status).toBe(201);
+    expect(response.body.participants).toHaveLength(2);
+    expect(response.body.participants).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'Bob', role: 'member' })]),
+    );
+  });
+
+  it('rejects a non-owner adding a participant with a 403', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    const strangerToken = await registerAndGetToken(app, 'bob@example.com', 'Bob');
+    await registerAndGetToken(app, 'carol@example.com', 'Carol');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+
+    const response = await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${strangerToken}`)
+      .send({ email: 'carol@example.com' });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('returns 404 when no account exists for the given email', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+
+    const response = await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: 'unknown@example.com' });
+
+    expect(response.status).toBe(404);
+  });
+
+  it('rejects adding someone who already joined the trip with a 400', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    await registerAndGetToken(app, 'bob@example.com', 'Bob');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+    await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: 'bob@example.com' });
+
+    const response = await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: 'bob@example.com' });
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/trips/:id/participants/:userId', () => {
+  it('lets the owner remove a participant from the trip', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    await registerAndGetToken(app, 'bob@example.com', 'Bob');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+    const addResponse = await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: 'bob@example.com' });
+    const bobParticipant = (
+      addResponse.body.participants as Array<{ userId: string; name: string }>
+    ).find((participant) => participant.name === 'Bob')!;
+
+    const response = await request(app)
+      .delete(`/api/trips/${String(createResponse.body.id)}/participants/${bobParticipant.userId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.participants).toHaveLength(1);
+  });
+
+  it('rejects a non-owner removing a participant with a 403', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    const bobToken = await registerAndGetToken(app, 'bob@example.com', 'Bob');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+    await request(app)
+      .post(`/api/trips/${String(createResponse.body.id)}/participants`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: 'bob@example.com' });
+
+    const response = await request(app)
+      .delete(`/api/trips/${String(createResponse.body.id)}/participants/anyone`)
+      .set('Authorization', `Bearer ${bobToken}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it('returns 404 when the participant never joined the trip', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+
+    const response = await request(app)
+      .delete(`/api/trips/${String(createResponse.body.id)}/participants/unknown-user`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(response.status).toBe(404);
+  });
+
+  it('rejects removing the owner with a 409', async () => {
+    const app = buildTestApp();
+    const ownerToken = await registerAndGetToken(app, 'alice@example.com', 'Alice');
+    const createResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: "Alice's trip" });
+    const ownerId = createResponse.body.participants[0].userId as string;
+
+    const response = await request(app)
+      .delete(`/api/trips/${String(createResponse.body.id)}/participants/${ownerId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(response.status).toBe(409);
+  });
+});

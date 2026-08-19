@@ -4,15 +4,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useDeleteTripMutation, useTripQuery, useUpdateTripMutation } from '@/hooks/useTrips'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  useAddParticipantMutation,
+  useDeleteTripMutation,
+  useRemoveParticipantMutation,
+  useTripQuery,
+  useUpdateTripMutation,
+} from '@/hooks/useTrips'
 
 export function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const tripQuery = useTripQuery(id ?? '')
   const updateTrip = useUpdateTripMutation(id ?? '')
   const deleteTrip = useDeleteTripMutation()
+  const addParticipant = useAddParticipantMutation(id ?? '')
+  const removeParticipant = useRemoveParticipantMutation(id ?? '')
   const [nameOverride, setNameOverride] = useState<string | undefined>(undefined)
+  const [participantEmail, setParticipantEmail] = useState('')
   const name = nameOverride ?? tripQuery.data?.name ?? ''
 
   async function handleRename(event: FormEvent) {
@@ -30,6 +41,22 @@ export function TripDetailPage() {
     }
     await deleteTrip.mutateAsync(id)
     await navigate('/')
+  }
+
+  async function handleAddParticipant(event: FormEvent) {
+    event.preventDefault()
+    if (!participantEmail.trim()) {
+      return
+    }
+    await addParticipant.mutateAsync(participantEmail)
+    setParticipantEmail('')
+  }
+
+  async function handleRemoveParticipant(userId: string, name: string) {
+    if (!window.confirm(`Retirer ${name} de ce voyage ?`)) {
+      return
+    }
+    await removeParticipant.mutateAsync(userId)
   }
 
   if (tripQuery.isPending) {
@@ -79,13 +106,49 @@ export function TripDetailPage() {
 
           <div>
             <p className="text-sm font-medium">Participants</p>
-            <ul className="mt-2 flex flex-col gap-1 text-sm text-muted-foreground">
+            <ul className="mt-2 flex flex-col gap-1 text-sm">
               {trip.participants.map((participant) => (
-                <li key={participant.userId}>
-                  {participant.name} — {participant.role === 'owner' ? 'organisateur' : 'membre'}
+                <li key={participant.userId} className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">
+                    {participant.name} — {participant.role === 'owner' ? 'organisateur' : 'membre'}
+                  </span>
+                  {participant.role !== 'owner' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={removeParticipant.isPending}
+                      onClick={() => void handleRemoveParticipant(participant.userId, participant.name)}
+                    >
+                      Retirer
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
+            {removeParticipant.isError && (
+              <p className="mt-2 text-sm text-destructive">{removeParticipant.error.message}</p>
+            )}
+
+            {trip.participants.some((p) => p.userId === user?.id && p.role === 'owner') && (
+              <form
+                className="mt-4 flex gap-2"
+                onSubmit={(event) => void handleAddParticipant(event)}
+              >
+                <Input
+                  type="email"
+                  placeholder="email@exemple.com"
+                  value={participantEmail}
+                  onChange={(event) => setParticipantEmail(event.target.value)}
+                />
+                <Button type="submit" variant="outline" disabled={addParticipant.isPending}>
+                  Inviter
+                </Button>
+              </form>
+            )}
+            {addParticipant.isError && (
+              <p className="mt-2 text-sm text-destructive">{addParticipant.error.message}</p>
+            )}
           </div>
 
           <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteTrip.isPending}>

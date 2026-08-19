@@ -7,6 +7,8 @@ export * from './trip/InMemoryTripRepository';
 export * from './trip/CreateTripUseCase';
 export * from './trip/UpdateTripUseCase';
 export * from './trip/DeleteTripUseCase';
+export * from './trip/AddParticipantToTripUseCase';
+export * from './trip/RemoveParticipantFromTripUseCase';
 export * from './trip/errors';
 
 export * from './user/User';

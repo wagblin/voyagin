@@ -63,3 +63,19 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
 export async function deleteTrip(id: string): Promise<void> {
   await authorizedFetch(`/api/trips/${id}`, { method: 'DELETE' });
 }
+
+export async function addParticipant(tripId: string, email: string): Promise<Trip> {
+  const response = await authorizedFetch(`/api/trips/${tripId}/participants`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({ email }),
+  });
+  return (await response.json()) as Trip;
+}
+
+export async function removeParticipant(tripId: string, userId: string): Promise<Trip> {
+  const response = await authorizedFetch(`/api/trips/${tripId}/participants/${userId}`, {
+    method: 'DELETE',
+  });
+  return (await response.json()) as Trip;
+}

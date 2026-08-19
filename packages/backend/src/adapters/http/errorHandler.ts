@@ -11,6 +11,8 @@ import {
   DuplicateParticipantError,
   TripNotFoundError,
   NotTripOwnerError,
+  ParticipantNotFoundError,
+  CannotRemoveOwnerError,
 } from '@voyagin/domain';
 
 const STATUS_BY_ERROR_NAME: Record<string, number> = {
@@ -24,7 +26,9 @@ const STATUS_BY_ERROR_NAME: Record<string, number> = {
   NotTripOwnerError: 403,
   UserNotFoundError: 404,
   TripNotFoundError: 404,
+  ParticipantNotFoundError: 404,
   EmailAlreadyRegisteredError: 409,
+  CannotRemoveOwnerError: 409,
 };
 
 const KNOWN_ERROR_CLASSES = [
@@ -39,6 +43,8 @@ const KNOWN_ERROR_CLASSES = [
   DuplicateParticipantError,
   TripNotFoundError,
   NotTripOwnerError,
+  ParticipantNotFoundError,
+  CannotRemoveOwnerError,
 ];
 
 export function errorHandler(err: unknown, _req: Request, res: Response, next: NextFunction): void {

@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useDeleteTripMutation, useTripQuery, useUpdateTripMutation } from '../hooks/useTrips';
+import {
+  useAddParticipantMutation,
+  useDeleteTripMutation,
+  useRemoveParticipantMutation,
+  useTripQuery,
+  useUpdateTripMutation,
+} from '../hooks/useTrips';
+import type { TripParticipant } from '../lib/tripsApi';
 
 export interface TripDetailScreenProps {
   tripId: string;
@@ -11,10 +18,13 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
   const tripQuery = useTripQuery(tripId);
   const updateTripMutation = useUpdateTripMutation();
   const deleteTripMutation = useDeleteTripMutation();
+  const addParticipantMutation = useAddParticipantMutation(tripId);
+  const removeParticipantMutation = useRemoveParticipantMutation(tripId);
 
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
 
   useEffect(() => {
     if (tripQuery.data) {
@@ -48,6 +58,29 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
         style: 'destructive',
         onPress: () => {
           deleteTripMutation.mutate(tripId, { onSuccess: onBack });
+        },
+      },
+    ]);
+  }
+
+  function handleInvite() {
+    const trimmedEmail = inviteEmail.trim();
+    if (trimmedEmail === '') {
+      return;
+    }
+    addParticipantMutation.mutate(trimmedEmail, {
+      onSuccess: () => setInviteEmail(''),
+    });
+  }
+
+  function handleRemoveParticipant(participant: TripParticipant) {
+    Alert.alert('Retirer le participant', `Retirer ${participant.name} de ce voyage ?`, [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Retirer',
+        style: 'destructive',
+        onPress: () => {
+          removeParticipantMutation.mutate(participant.userId);
         },
       },
     ]);
@@ -100,10 +133,49 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
 
           <Text style={styles.label}>Participants</Text>
           {tripQuery.data.participants.map((participant) => (
-            <Text key={participant.userId} style={styles.participant}>
-              {participant.name} ({participant.role})
-            </Text>
+            <View key={participant.userId} style={styles.participantRow}>
+              <Text style={styles.participant}>
+                {participant.name} ({participant.role})
+              </Text>
+              {participant.role !== 'owner' ? (
+                <TouchableOpacity
+                  onPress={() => handleRemoveParticipant(participant)}
+                  disabled={removeParticipantMutation.isPending}
+                  testID={`remove-participant-${participant.userId}`}
+                >
+                  <Text style={styles.removeParticipantText}>Retirer</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ))}
+
+          {removeParticipantMutation.isError ? (
+            <Text style={styles.error}>{removeParticipantMutation.error.message}</Text>
+          ) : null}
+
+          <Text style={styles.label}>Inviter par email</Text>
+          <TextInput
+            style={styles.input}
+            value={inviteEmail}
+            onChangeText={setInviteEmail}
+            placeholder="ami@example.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            testID="invite-email-input"
+          />
+
+          {addParticipantMutation.isError ? (
+            <Text style={styles.error}>{addParticipantMutation.error.message}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleInvite}
+            disabled={addParticipantMutation.isPending}
+            testID="invite-participant-button"
+          >
+            <Text style={styles.saveButtonText}>{addParticipantMutation.isPending ? '...' : 'Inviter'}</Text>
+          </TouchableOpacity>
 
           {deleteTripMutation.isError ? (
             <Text style={styles.error}>{deleteTripMutation.error.message}</Text>
@@ -173,9 +245,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
   participant: {
     fontSize: 15,
     color: '#374151',
+  },
+  removeParticipantText: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: '600',
   },
   deleteButton: {
     borderWidth: 1,

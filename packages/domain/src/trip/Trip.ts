@@ -1,7 +1,13 @@
 import { TripId } from './TripId';
 import { DateRange } from './DateRange';
 import { Participant } from './Participant';
-import { InvalidTripNameError, DuplicateParticipantError, NotTripOwnerError } from './errors';
+import {
+  InvalidTripNameError,
+  DuplicateParticipantError,
+  NotTripOwnerError,
+  ParticipantNotFoundError,
+  CannotRemoveOwnerError,
+} from './errors';
 
 export interface CreateTripProps {
   name: string;
@@ -18,7 +24,7 @@ export interface ReconstituteTripProps {
 }
 
 export class Trip {
-  private readonly participants: Participant[];
+  private participants: Participant[];
 
   private constructor(
     public readonly id: TripId,
@@ -45,11 +51,26 @@ export class Trip {
     return new Trip(TripId.create(props.id), props.name, participants, props.dateRange);
   }
 
-  addParticipant(participant: Participant): void {
+  addParticipant(participant: Participant, requesterId: string): void {
+    this.assertOwnedBy(requesterId);
     if (this.participants.some((existing) => existing.userId === participant.userId)) {
       throw new DuplicateParticipantError(participant.userId);
     }
     this.participants.push(participant);
+  }
+
+  removeParticipant(userId: string, requesterId: string): void {
+    this.assertOwnedBy(requesterId);
+
+    const participant = this.participants.find((existing) => existing.userId === userId);
+    if (!participant) {
+      throw new ParticipantNotFoundError(userId);
+    }
+    if (participant.isOwner()) {
+      throw new CannotRemoveOwnerError(userId);
+    }
+
+    this.participants = this.participants.filter((existing) => existing.userId !== userId);
   }
 
   adjustDateRange(dateRange: DateRange | undefined, requesterId: string): void {

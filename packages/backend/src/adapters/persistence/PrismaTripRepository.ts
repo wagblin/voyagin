@@ -8,28 +8,34 @@ export class PrismaTripRepository implements TripRepository {
 
   async save(trip: Trip): Promise<void> {
     const dateRange = trip.getDateRange();
+    const tripId = trip.id.toString();
+    const participants = trip.getParticipants().map((participant) => ({
+      tripId,
+      userId: participant.userId,
+      name: participant.name,
+      role: participant.role,
+    }));
 
-    await this.prisma.trip.upsert({
-      where: { id: trip.id.toString() },
-      create: {
-        id: trip.id.toString(),
-        name: trip.getName(),
-        startDate: dateRange?.start ?? null,
-        endDate: dateRange?.end ?? null,
-        participants: {
-          create: trip.getParticipants().map((participant) => ({
-            userId: participant.userId,
-            name: participant.name,
-            role: participant.role,
-          })),
+    await this.prisma.$transaction([
+      this.prisma.trip.upsert({
+        where: { id: tripId },
+        create: {
+          id: tripId,
+          name: trip.getName(),
+          startDate: dateRange?.start ?? null,
+          endDate: dateRange?.end ?? null,
         },
-      },
-      update: {
-        name: trip.getName(),
-        startDate: dateRange?.start ?? null,
-        endDate: dateRange?.end ?? null,
-      },
-    });
+        update: {
+          name: trip.getName(),
+          startDate: dateRange?.start ?? null,
+          endDate: dateRange?.end ?? null,
+        },
+      }),
+      // Participants have no independent identity in the domain — replacing the
+      // whole set on every save keeps it in sync whether trips are created or updated.
+      this.prisma.participant.deleteMany({ where: { tripId } }),
+      this.prisma.participant.createMany({ data: participants }),
+    ]);
   }
 
   async findById(id: TripId): Promise<Trip | null> {

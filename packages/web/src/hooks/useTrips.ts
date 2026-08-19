@@ -42,3 +42,25 @@ export function useDeleteTripMutation() {
     },
   })
 }
+
+export function useAddParticipantMutation(tripId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (email: string) => tripsApi.addParticipant(tripId, email),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: tripsKey })
+      void queryClient.invalidateQueries({ queryKey: tripKey(tripId) })
+    },
+  })
+}
+
+export function useRemoveParticipantMutation(tripId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => tripsApi.removeParticipant(tripId, userId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: tripsKey })
+      void queryClient.invalidateQueries({ queryKey: tripKey(tripId) })
+    },
+  })
+}
