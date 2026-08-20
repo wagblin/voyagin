@@ -89,8 +89,11 @@ L'API, le web et le mobile tournent en permanence dans le cloud (pas besoin d'un
 | API + Swagger | https://backend-production-693c2.up.railway.app/api-docs |
 | Web | https://web-mauve-alpha-16.vercel.app |
 | Mobile | Ouvrir [le projet EAS](https://expo.dev/accounts/wagblin/projects/voyagin) dans l'app **Expo Go** |
+| Console DB | https://db-console-production.up.railway.app (Adminer — identifiants Postgres requis, voir Railway) |
 
-Hébergement : Railway (API + Postgres), Vercel (web), EAS Update (mobile, sans build natif). Détails de config dans [`CLAUDE.md`](./CLAUDE.md#déploiement).
+Hébergement : Railway (API + Postgres + console DB), Vercel (web), EAS Update (mobile, sans build natif). Backend et web se redéploient automatiquement à chaque push sur `main` ; le mobile doit être republié à la main (`eas update --branch production`) ou via la CI (`.github/workflows/eas-update.yml`). Détails de config dans [`CLAUDE.md`](./CLAUDE.md#déploiement).
+
+**Console DB (Adminer)** : exposée publiquement mais protégée par les identifiants Postgres eux-mêmes (Adminer n'a pas de session sans les fournir à chaque connexion — même niveau de protection qu'un accès `psql` direct). Les identifiants sont dans Railway (`railway variables --service Postgres`), jamais commités.
 
 ## Workflow de développement
 
