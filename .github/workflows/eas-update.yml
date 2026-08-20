@@ -6,6 +6,7 @@ on:
     paths:
       - "packages/mobile/**"
       - "pnpm-lock.yaml"
+  workflow_dispatch:
 
 jobs:
   update:
