@@ -121,6 +121,13 @@ Deux subagents dans `.claude/agents/` reproduisent le mode de travail décrit pa
 
 Usage typique : `architecte` d'abord sur une feature, puis `developpeur` pour l'implémentation, en gardant `pnpm turbo run test` vert à chaque étape.
 
-## Déploiement (pas encore connecté)
+## Déploiement
 
-CI GitHub Actions (`.github/workflows/ci.yml`) : lint + typecheck + test sur push/PR. Le déploiement (Railway/Render pour l'API, Vercel/Netlify pour le web, EAS pour le mobile) nécessite des comptes/secrets que je n'ai pas — à brancher avec l'utilisateur quand ces services seront prêts. Ne pas inventer de credentials ni de config de déploiement non demandée.
+CI GitHub Actions (`.github/workflows/ci.yml`) : lint + typecheck + test sur push/PR.
+
+Déploiement cloud en place (comptes de l'utilisateur, connectés via CLI le 2026-08-20) :
+- **Backend + Postgres** : Railway, projet `voyagin` (services `Postgres` + `backend`). Déployé via `railway up` (upload local, pas encore branché sur push GitHub auto). Config de build/start dans `railway.json` à la racine (monorepo pnpm : installe tout le workspace, `prisma generate` au build, `prisma migrate deploy` + `ts-node-dev` au start). Variables `JWT_SECRET` et `DATABASE_URL` (référence `${{Postgres.DATABASE_URL}}`) posées sur le service `backend` via `railway variables`. Domaine public généré via `railway domain`.
+- **Web** : Vercel, projet `wagblin1/web`, déployé depuis `packages/web` (`vercel --prod`). Variable d'env `VITE_API_URL` pointe vers le domaine Railway du backend.
+- **Mobile** : EAS Update (pas de build natif ni de compte Apple Developer — gratuit). Projet EAS `@wagblin/voyagin` (`eas init`), update publié sur la branche `production` (`eas update --branch production`) avec `EXPO_PUBLIC_API_URL` pointant vers le backend Railway. Ouvrable dans Expo Go via la page du projet sur expo.dev, sans lancer Metro localement.
+
+Non fait / à décider avec l'utilisateur si besoin : auto-déploiement sur push GitHub (nécessiterait de connecter les repos dans Railway/Vercel et de publier un update EAS dans la CI), domaine custom, passage de Railway en plan payant (le crédit d'essai gratuit expire).

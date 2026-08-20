@@ -80,6 +80,18 @@ Fonctionnalités actuelles :
 - **Comptes utilisateurs** : inscription, connexion, déconnexion, modification du profil, suppression du compte.
 - **Voyages** : création, consultation, modification, suppression, gestion des participants (ajout/retrait) — réservée à l'organisateur du voyage.
 
+## Déploiement
+
+L'API, le web et le mobile tournent en permanence dans le cloud (pas besoin d'une machine allumée pour tester) :
+
+| | URL |
+|---|---|
+| API + Swagger | https://backend-production-693c2.up.railway.app/api-docs |
+| Web | https://web-mauve-alpha-16.vercel.app |
+| Mobile | Ouvrir [le projet EAS](https://expo.dev/accounts/wagblin/projects/voyagin) dans l'app **Expo Go** |
+
+Hébergement : Railway (API + Postgres), Vercel (web), EAS Update (mobile, sans build natif). Détails de config dans [`CLAUDE.md`](./CLAUDE.md#déploiement).
+
 ## Workflow de développement
 
 Deux subagents Claude Code dans [`.claude/agents/`](./.claude/agents/) reproduisent un mode de travail à deux rôles :
