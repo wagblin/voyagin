@@ -20,12 +20,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "1823f805-2224-4167-981a-2e68b83cc4cc"
-      }
-    },
-    "owner": "wagblin"
+    }
   }
 }
