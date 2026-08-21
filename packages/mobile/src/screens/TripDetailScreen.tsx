@@ -22,8 +22,14 @@ import {
 } from '../hooks/useTrips';
 import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '../hooks/useTripPhotos';
 import { PhotoMap } from '../components/PhotoMap';
+import { parseExifCoordinates } from '../lib/exifLocation';
 import type { TripParticipant } from '../lib/tripsApi';
 import type { Photo } from '../lib/photosApi';
+
+interface PendingPhoto {
+  uri: string;
+  takenAt: string;
+}
 
 export interface TripDetailScreenProps {
   tripId: string;
@@ -46,6 +52,11 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
   const [endDate, setEndDate] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null);
+  const [photoLatitude, setPhotoLatitude] = useState('');
+  const [photoLongitude, setPhotoLongitude] = useState('');
+  const [photoCaption, setPhotoCaption] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     if (tripQuery.data) {
@@ -107,6 +118,13 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     ]);
   }
 
+  function resetPendingPhoto() {
+    setPendingPhoto(null);
+    setPhotoLatitude('');
+    setPhotoLongitude('');
+    setPhotoCaption('');
+  }
+
   async function handleCapturePhoto() {
     setCaptureError(null);
 
@@ -129,17 +147,85 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
 
     const position = await Location.getCurrentPositionAsync({});
 
+    setPendingPhoto({ uri: result.assets[0]!.uri, takenAt: new Date().toISOString() });
+    setPhotoLatitude(String(position.coords.latitude));
+    setPhotoLongitude(String(position.coords.longitude));
+    setPhotoCaption('');
+  }
+
+  async function handlePickPhoto() {
+    setCaptureError(null);
+
+    const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!libraryPermission.granted) {
+      setCaptureError('Autorisation bibliothèque refusée.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, exif: true });
+    if (result.canceled || result.assets.length === 0) {
+      return;
+    }
+
+    const asset = result.assets[0]!;
+    const coordinates = parseExifCoordinates(asset.exif ?? null);
+
+    setPendingPhoto({ uri: asset.uri, takenAt: new Date().toISOString() });
+    setPhotoLatitude(coordinates ? String(coordinates.latitude) : '');
+    setPhotoLongitude(coordinates ? String(coordinates.longitude) : '');
+    setPhotoCaption('');
+  }
+
+  async function handleUseMyLocation() {
+    setCaptureError(null);
+
+    const locationPermission = await Location.requestForegroundPermissionsAsync();
+    if (!locationPermission.granted) {
+      setCaptureError('Autorisation de localisation refusée.');
+      return;
+    }
+
+    setIsLocating(true);
+    try {
+      const position = await Location.getCurrentPositionAsync({});
+      setPhotoLatitude(String(position.coords.latitude));
+      setPhotoLongitude(String(position.coords.longitude));
+    } finally {
+      setIsLocating(false);
+    }
+  }
+
+  function handleConfirmAddPhoto() {
+    if (pendingPhoto === null) {
+      return;
+    }
+
+    const latitude = Number(photoLatitude);
+    const longitude = Number(photoLongitude);
+    if (photoLatitude.trim() === '' || photoLongitude.trim() === '' || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      return;
+    }
+
+    const trimmedCaption = photoCaption.trim();
+
     addPhotoMutation.mutate(
       {
-        uri: result.assets[0]!.uri,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        takenAt: new Date().toISOString(),
+        uri: pendingPhoto.uri,
+        latitude,
+        longitude,
+        takenAt: pendingPhoto.takenAt,
+        ...(trimmedCaption !== '' ? { caption: trimmedCaption } : {}),
       },
       {
+        onSuccess: resetPendingPhoto,
         onError: (error) => setCaptureError(error.message),
       },
     );
+  }
+
+  function handleCancelAddPhoto() {
+    setCaptureError(null);
+    resetPendingPhoto();
   }
 
   function handleDeletePhoto(photo: Photo) {
@@ -263,16 +349,90 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
           {captureError ? <Text style={styles.error}>{captureError}</Text> : null}
           {addPhotoMutation.isError ? <Text style={styles.error}>{addPhotoMutation.error.message}</Text> : null}
 
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={() => void handleCapturePhoto()}
-            disabled={addPhotoMutation.isPending}
-            testID="capture-photo-button"
-          >
-            <Text style={styles.saveButtonText}>
-              {addPhotoMutation.isPending ? 'Envoi…' : 'Prendre une photo'}
-            </Text>
-          </TouchableOpacity>
+          {pendingPhoto === null ? (
+            <View style={styles.photoActionsRow}>
+              <TouchableOpacity
+                style={[styles.saveButton, styles.photoActionButton]}
+                onPress={() => void handleCapturePhoto()}
+                testID="capture-photo-button"
+              >
+                <Text style={styles.saveButtonText}>Prendre une photo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveButton, styles.photoActionButton]}
+                onPress={() => void handlePickPhoto()}
+                testID="pick-photo-button"
+              >
+                <Text style={styles.saveButtonText}>Choisir depuis la bibliothèque</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.pendingPhotoForm}>
+              <Image source={{ uri: pendingPhoto.uri }} style={styles.pendingPhotoPreview} />
+
+              <Text style={styles.label}>Latitude</Text>
+              <TextInput
+                style={styles.input}
+                value={photoLatitude}
+                onChangeText={setPhotoLatitude}
+                keyboardType="decimal-pad"
+                testID="photo-latitude-input"
+              />
+
+              <Text style={styles.label}>Longitude</Text>
+              <TextInput
+                style={styles.input}
+                value={photoLongitude}
+                onChangeText={setPhotoLongitude}
+                keyboardType="decimal-pad"
+                testID="photo-longitude-input"
+              />
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => void handleUseMyLocation()}
+                disabled={isLocating}
+                testID="use-my-location-button"
+              >
+                <Text style={styles.saveButtonText}>{isLocating ? '...' : 'Ma position'}</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.label}>Légende (optionnel)</Text>
+              <TextInput
+                style={styles.input}
+                value={photoCaption}
+                onChangeText={setPhotoCaption}
+                testID="photo-caption-input"
+              />
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleConfirmAddPhoto}
+                disabled={
+                  addPhotoMutation.isPending ||
+                  photoLatitude.trim() === '' ||
+                  photoLongitude.trim() === '' ||
+                  Number.isNaN(Number(photoLatitude)) ||
+                  Number.isNaN(Number(photoLongitude))
+                }
+                testID="confirm-add-photo-button"
+              >
+                <Text style={styles.saveButtonText}>
+                  {addPhotoMutation.isPending ? 'Envoi…' : 'Ajouter la photo'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleCancelAddPhoto}
+                disabled={addPhotoMutation.isPending}
+                testID="cancel-add-photo-button"
+              >
+                <Text style={styles.deleteButtonText}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {photosQuery.isPending ? <ActivityIndicator style={styles.loading} /> : null}
           {photosQuery.isError ? <Text style={styles.error}>{photosQuery.error.message}</Text> : null}
@@ -394,6 +554,21 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#dc2626',
     fontWeight: '600',
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  photoActionButton: {
+    flex: 1,
+  },
+  pendingPhotoForm: {
+    gap: 8,
+  },
+  pendingPhotoPreview: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
   },
   photoGrid: {
     flexDirection: 'row',

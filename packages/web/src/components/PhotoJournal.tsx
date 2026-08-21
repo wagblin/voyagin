@@ -86,7 +86,6 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
             id="photo-file"
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
         </div>
