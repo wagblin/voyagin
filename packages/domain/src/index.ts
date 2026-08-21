@@ -24,3 +24,12 @@ export * from './user/AuthenticateUserUseCase';
 export * from './user/UpdateUserUseCase';
 export * from './user/DeleteUserUseCase';
 export * from './user/errors';
+
+export * from './photo/Photo';
+export * from './photo/PhotoId';
+export * from './photo/GeoLocation';
+export * from './photo/PhotoRepository';
+export * from './photo/InMemoryPhotoRepository';
+export * from './photo/AddPhotoToTripUseCase';
+export * from './photo/RemovePhotoFromTripUseCase';
+export * from './photo/errors';

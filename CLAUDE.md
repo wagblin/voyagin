@@ -23,6 +23,8 @@ Fonctionnalités V1 visées (au-delà du slice actuel) : carte interactive (trac
 | ORM | Prisma |
 | Database | PostgreSQL |
 | Validation | Zod |
+| Stockage images | Cloudinary |
+| Cartographie | Leaflet (web, gratuit/sans clé) + react-native-maps (mobile — Apple Maps sur iOS sans clé, Google Maps sur Android avec clé) |
 | Testing | Jest (+ Supertest côté backend) |
 | Auth | JWT (`jsonwebtoken`) |
 | Langage | TypeScript strict partout |
@@ -32,7 +34,7 @@ Fonctionnalités V1 visées (au-delà du slice actuel) : carte interactive (trac
 | CI/CD | GitHub Actions |
 | Monitoring | Sentry |
 
-**État actuel du repo** : monorepo pnpm + Turborepo avec `packages/domain` (coeur métier DDD — agrégats `Trip` et `User`), `packages/backend` (Express/Prisma, JWT, doc OpenAPI sur `/api-docs`), `packages/web` (Vite + React + Tailwind v4 + shadcn/ui + TanStack Query) et `packages/mobile` (Expo + React Native + TanStack Query). Fonctionnalités livrées bout-en-bout (domaine → API → web → mobile) : comptes utilisateurs (inscription/connexion/déconnexion/modification/suppression) et voyages (création/consultation/modification/suppression/gestion des participants). Web et mobile n'importent pas encore `@voyagin/domain` directement, ils consomment l'API HTTP via des hooks TanStack Query.
+**État actuel du repo** : monorepo pnpm + Turborepo avec `packages/domain` (coeur métier DDD — agrégats `Trip`, `User`, `Photo`), `packages/backend` (Express/Prisma, JWT, upload Cloudinary, doc OpenAPI sur `/api-docs`), `packages/web` (Vite + React + Tailwind v4 + shadcn/ui + TanStack Query + Leaflet) et `packages/mobile` (Expo + React Native + TanStack Query + react-native-maps). Fonctionnalités livrées bout-en-bout (domaine → API → web → mobile) : comptes utilisateurs (inscription/connexion/déconnexion/modification/suppression), voyages (création/consultation/modification/suppression/gestion des participants), et carnet photo géolocalisé (ajout/liste/suppression de photos avec position GPS, affichées sur une carte interactive). Web et mobile n'importent pas encore `@voyagin/domain` directement, ils consomment l'API HTTP via des hooks TanStack Query.
 
 ## Décisions architecturales (non négociables)
 
@@ -126,7 +128,7 @@ Usage typique : `architecte` d'abord sur une feature, puis `developpeur` pour l'
 CI GitHub Actions (`.github/workflows/ci.yml`) : lint + typecheck + test sur push/PR.
 
 Déploiement cloud en place (comptes de l'utilisateur, connectés via CLI le 2026-08-20) :
-- **Backend + Postgres** : Railway, projet `voyagin` (services `Postgres`, `backend`, `db-console`). Service `backend` connecté au repo GitHub (`railway service source connect`) — **auto-déploie sur chaque push sur `main`**. Config de build/start dans `railway.json` à la racine (monorepo pnpm : installe tout le workspace, `prisma generate` au build, `prisma migrate deploy` + `ts-node-dev` au start). Variables `JWT_SECRET` et `DATABASE_URL` (référence `${{Postgres.DATABASE_URL}}`) posées sur le service `backend` via `railway variables`. Domaine public généré via `railway domain`.
+- **Backend + Postgres** : Railway, projet `voyagin` (services `Postgres`, `backend`, `db-console`). Service `backend` connecté au repo GitHub (`railway service source connect`) — **auto-déploie sur chaque push sur `main`**. Config de build/start dans `railway.json` à la racine (monorepo pnpm : installe tout le workspace, `prisma generate` au build, `prisma migrate deploy` + `ts-node-dev` au start). Variables `JWT_SECRET`, `DATABASE_URL` (référence `${{Postgres.DATABASE_URL}}`) et `CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` (stockage photos) posées sur le service `backend` via `railway variables`. Domaine public généré via `railway domain`.
 - **Console DB** : service `db-console` (image Docker officielle `adminer`), domaine public généré, `ADMINER_DEFAULT_SERVER`/`_DRIVER`/`_DB` pré-remplissent le formulaire de connexion mais PAS le mot de passe — celui-ci reste à saisir à chaque connexion (`railway variables --service Postgres` pour le récupérer). Ne jamais mettre ce mot de passe dans un fichier du repo.
 - **Web** : Vercel, projet `wagblin1/web`, connecté au repo GitHub (`vercel git connect` + `root-directory=packages/web`) — **auto-déploie sur chaque push sur `main`**. Variable d'env `VITE_API_URL` pointe vers le domaine Railway du backend.
 - **Mobile** : pas de déploiement cloud — **Expo Go ne peut pas charger les mises à jour publiées via EAS Update** (limitation d'Expo : dès qu'un projet a `runtimeVersion`/`updates.url` configurés, Expo Go refuse de l'ouvrir, il faut une "development build" avec `expo-dev-client`). Testé via `pnpm dev:lan` (voir section Wi-Fi ci-dessus) : Metro tourne sur la machine de dev, ouvert dans Expo Go via `exp://<IP>:8081` — **aucun compte Expo requis** pour ce mode. Pas de projet EAS enregistré (compte Expo de l'utilisateur supprimé) ; à recréer (`eas init`) seulement si besoin d'une vraie development build plus tard (accès mobile permanent) : gratuit pour Android (.apk à sideloader), nécessite un compte Apple Developer à 99$/an pour un vrai appareil iOS.

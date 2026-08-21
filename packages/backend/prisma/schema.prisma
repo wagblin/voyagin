@@ -15,6 +15,7 @@ model Trip {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   participants Participant[]
+  photos       Photo[]
 
   @@map("trips")
 }
@@ -40,4 +41,18 @@ model User {
   updatedAt      DateTime @updatedAt
 
   @@map("users")
+}
+
+model Photo {
+  id         String   @id
+  tripId     String
+  uploaderId String
+  imageUrl   String
+  latitude   Float
+  longitude  Float
+  takenAt    DateTime
+  caption    String?
+  trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("photos")
 }

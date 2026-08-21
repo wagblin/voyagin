@@ -1,5 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+import { useAuth } from '../hooks/useAuth';
 import {
   useAddParticipantMutation,
   useDeleteTripMutation,
@@ -7,7 +20,10 @@ import {
   useTripQuery,
   useUpdateTripMutation,
 } from '../hooks/useTrips';
+import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '../hooks/useTripPhotos';
+import { PhotoMap } from '../components/PhotoMap';
 import type { TripParticipant } from '../lib/tripsApi';
+import type { Photo } from '../lib/photosApi';
 
 export interface TripDetailScreenProps {
   tripId: string;
@@ -15,16 +31,21 @@ export interface TripDetailScreenProps {
 }
 
 export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
+  const { user } = useAuth();
   const tripQuery = useTripQuery(tripId);
   const updateTripMutation = useUpdateTripMutation();
   const deleteTripMutation = useDeleteTripMutation();
   const addParticipantMutation = useAddParticipantMutation(tripId);
   const removeParticipantMutation = useRemoveParticipantMutation(tripId);
+  const photosQuery = useTripPhotosQuery(tripId);
+  const addPhotoMutation = useAddPhotoMutation(tripId);
+  const deletePhotoMutation = useDeletePhotoMutation(tripId);
 
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   useEffect(() => {
     if (tripQuery.data) {
@@ -86,8 +107,66 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     ]);
   }
 
+  async function handleCapturePhoto() {
+    setCaptureError(null);
+
+    const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!cameraPermission.granted) {
+      setCaptureError('Autorisation caméra refusée.');
+      return;
+    }
+
+    const locationPermission = await Location.requestForegroundPermissionsAsync();
+    if (!locationPermission.granted) {
+      setCaptureError('Autorisation de localisation refusée.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (result.canceled || result.assets.length === 0) {
+      return;
+    }
+
+    const position = await Location.getCurrentPositionAsync({});
+
+    addPhotoMutation.mutate(
+      {
+        uri: result.assets[0]!.uri,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        takenAt: new Date().toISOString(),
+      },
+      {
+        onError: (error) => setCaptureError(error.message),
+      },
+    );
+  }
+
+  function handleDeletePhoto(photo: Photo) {
+    Alert.alert('Supprimer la photo', 'Cette action est définitive. Continuer ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () => {
+          deletePhotoMutation.mutate(photo.id);
+        },
+      },
+    ]);
+  }
+
+  function canDeletePhoto(photo: Photo): boolean {
+    if (user === null) {
+      return false;
+    }
+    if (photo.uploaderId === user.id) {
+      return true;
+    }
+    return tripQuery.data?.participants.some((p) => p.userId === user.id && p.role === 'owner') ?? false;
+  }
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <TouchableOpacity onPress={onBack} testID="back-button">
         <Text style={styles.backText}>{'< Retour'}</Text>
       </TouchableOpacity>
@@ -177,6 +256,48 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
             <Text style={styles.saveButtonText}>{addParticipantMutation.isPending ? '...' : 'Inviter'}</Text>
           </TouchableOpacity>
 
+          <Text style={styles.label}>Carnet photo</Text>
+
+          <PhotoMap photos={photosQuery.data ?? []} />
+
+          {captureError ? <Text style={styles.error}>{captureError}</Text> : null}
+          {addPhotoMutation.isError ? <Text style={styles.error}>{addPhotoMutation.error.message}</Text> : null}
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => void handleCapturePhoto()}
+            disabled={addPhotoMutation.isPending}
+            testID="capture-photo-button"
+          >
+            <Text style={styles.saveButtonText}>
+              {addPhotoMutation.isPending ? 'Envoi…' : 'Prendre une photo'}
+            </Text>
+          </TouchableOpacity>
+
+          {photosQuery.isPending ? <ActivityIndicator style={styles.loading} /> : null}
+          {photosQuery.isError ? <Text style={styles.error}>{photosQuery.error.message}</Text> : null}
+          {deletePhotoMutation.isError ? (
+            <Text style={styles.error}>{deletePhotoMutation.error.message}</Text>
+          ) : null}
+
+          <View style={styles.photoGrid}>
+            {(photosQuery.data ?? []).map((photo) => (
+              <View key={photo.id} style={styles.photoCard}>
+                <Image source={{ uri: photo.imageUrl }} style={styles.photoImage} />
+                {photo.caption ? <Text style={styles.photoCaption}>{photo.caption}</Text> : null}
+                {canDeletePhoto(photo) ? (
+                  <TouchableOpacity
+                    onPress={() => handleDeletePhoto(photo)}
+                    disabled={deletePhotoMutation.isPending}
+                    testID={`delete-photo-${photo.id}`}
+                  >
+                    <Text style={styles.removeParticipantText}>Supprimer</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ))}
+          </View>
+
           {deleteTripMutation.isError ? (
             <Text style={styles.error}>{deleteTripMutation.error.message}</Text>
           ) : null}
@@ -193,7 +314,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
           </TouchableOpacity>
         </>
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -272,5 +393,24 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#dc2626',
     fontWeight: '600',
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  photoCard: {
+    width: '31%',
+    gap: 4,
+  },
+  photoImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
+  },
+  photoCaption: {
+    fontSize: 11,
+    color: '#374151',
   },
 });

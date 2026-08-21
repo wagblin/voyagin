@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PhotoJournal } from '@/components/PhotoJournal'
 import { useAuth } from '@/hooks/useAuth'
 import {
   useAddParticipantMutation,
@@ -150,6 +151,14 @@ export function TripDetailPage() {
               <p className="mt-2 text-sm text-destructive">{addParticipant.error.message}</p>
             )}
           </div>
+
+          <PhotoJournal
+            tripId={id ?? ''}
+            currentUserId={user?.id}
+            canDeleteAnyPhoto={trip.participants.some(
+              (p) => p.userId === user?.id && p.role === 'owner',
+            )}
+          />
 
           <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteTrip.isPending}>
             Supprimer ce voyage

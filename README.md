@@ -21,6 +21,8 @@ Carnet de voyage collaboratif en temps réel. **« Le In compte »** : VoyagIn c
 | Base de données | PostgreSQL |
 | Validation | Zod |
 | Auth | JWT |
+| Stockage images | Cloudinary |
+| Cartographie | Leaflet (web) + react-native-maps (mobile) |
 | Tests | Jest / Vitest (+ Supertest côté backend) |
 | Langage | TypeScript strict partout |
 | Doc API | OpenAPI / Swagger |
@@ -32,7 +34,7 @@ Architecture **hexagonale** (ports & adapters) + **DDD** + **TDD strict** (Red �
 
 ```
 packages/
-  domain/     # coeur métier pur (DDD) — agrégats Trip et User, ports, use cases — 0 dépendance infra
+  domain/     # coeur métier pur (DDD) — agrégats Trip, User, Photo, ports, use cases — 0 dépendance infra
   backend/    # API Express — adapters HTTP, persistence Prisma, sécurité (JWT, bcrypt), Swagger
   web/        # React + Vite + Tailwind + shadcn/ui + TanStack Query
   mobile/     # Expo + React Native + TanStack Query
@@ -79,6 +81,7 @@ Une fois le backend lancé, la documentation interactive (OpenAPI/Swagger) est d
 Fonctionnalités actuelles :
 - **Comptes utilisateurs** : inscription, connexion, déconnexion, modification du profil, suppression du compte.
 - **Voyages** : création, consultation, modification, suppression, gestion des participants (ajout/retrait) — réservée à l'organisateur du voyage.
+- **Carnet photo géolocalisé** : ajout d'une photo (avec position GPS et horodatage) à un voyage — réservé aux participants ; liste et suppression (auteur de la photo ou organisateur du voyage) ; affichage sur une carte interactive (web et mobile).
 
 ## Déploiement
 

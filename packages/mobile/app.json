@@ -20,6 +20,21 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "VoyagIn a besoin d'accéder à l'appareil photo pour ajouter des photos à votre carnet de voyage.",
+          "photosPermission": "VoyagIn a besoin d'accéder à vos photos pour les ajouter à votre carnet de voyage."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "VoyagIn a besoin de votre position pour géolocaliser les photos de votre carnet de voyage."
+        }
+      ]
+    ]
   }
 }

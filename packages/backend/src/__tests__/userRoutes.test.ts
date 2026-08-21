@@ -1,18 +1,5 @@
 import request from 'supertest';
-import { InMemoryTripRepository, InMemoryUserRepository, InMemoryPasswordHasher } from '@voyagin/domain';
-import { buildApp } from '../infrastructure/app';
-import { JwtTokenService } from '../adapters/security/JwtTokenService';
-import { TokenBlocklist } from '../adapters/security/TokenBlocklist';
-
-function buildTestApp() {
-  return buildApp({
-    tripRepository: new InMemoryTripRepository(),
-    userRepository: new InMemoryUserRepository(),
-    passwordHasher: new InMemoryPasswordHasher(),
-    tokenService: new JwtTokenService('test-secret'),
-    tokenBlocklist: new TokenBlocklist(),
-  });
-}
+import { buildTestApp } from '../testHelpers/testApp';
 
 async function registerAndGetToken(app: ReturnType<typeof buildTestApp>) {
   const response = await request(app)
