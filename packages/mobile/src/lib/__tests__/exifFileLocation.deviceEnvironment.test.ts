@@ -18,10 +18,21 @@ jest.mock('expo-file-system/legacy', () => ({
 }));
 
 describe('extractGpsFromFileUri on a real device environment (navigator.userAgent undefined)', () => {
-  const originalUserAgentDescriptor = Object.getOwnPropertyDescriptor(globalThis.navigator, 'userAgent');
+  // Node 24 (dev local) fournit un `navigator` global natif ; Node 20 (CI) n'en fournit aucun — on
+  // capture donc le descripteur de la propriété `navigator` sur `globalThis` elle-même (pas celui de
+  // `userAgent` sur un `navigator` supposé préexistant), pour pouvoir restaurer l'état exact d'avant
+  // le test dans les deux cas.
+  const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 
   beforeEach(() => {
     jest.resetModules();
+    if (!('navigator' in globalThis)) {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {},
+        configurable: true,
+        writable: true,
+      });
+    }
     Object.defineProperty(globalThis.navigator, 'userAgent', {
       value: undefined,
       configurable: true,
@@ -30,8 +41,10 @@ describe('extractGpsFromFileUri on a real device environment (navigator.userAgen
   });
 
   afterEach(() => {
-    if (originalUserAgentDescriptor) {
-      Object.defineProperty(globalThis.navigator, 'userAgent', originalUserAgentDescriptor);
+    if (originalNavigatorDescriptor) {
+      Object.defineProperty(globalThis, 'navigator', originalNavigatorDescriptor);
+    } else {
+      delete (globalThis as { navigator?: unknown }).navigator;
     }
   });
 
