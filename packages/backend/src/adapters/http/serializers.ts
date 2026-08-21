@@ -23,15 +23,13 @@ export function serializeTrip(trip: Trip) {
 }
 
 export function serializePhoto(photo: Photo) {
+  const location = photo.getLocation();
   return {
     id: photo.id.toString(),
     tripId: photo.getTripId(),
     uploaderId: photo.getUploaderId(),
     imageUrl: photo.getImageUrl(),
-    location: {
-      latitude: photo.getLocation().latitude,
-      longitude: photo.getLocation().longitude,
-    },
+    location: location ? { latitude: location.latitude, longitude: location.longitude } : null,
     takenAt: photo.getTakenAt(),
     caption: photo.getCaption() ?? null,
   };

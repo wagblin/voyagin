@@ -10,15 +10,15 @@ export interface Photo {
   tripId: string
   uploaderId: string
   imageUrl: string
-  location: PhotoLocation
+  location: PhotoLocation | null
   takenAt: string
   caption: string | null
 }
 
 export interface AddPhotoInput {
   file: File
-  latitude: number
-  longitude: number
+  latitude?: number
+  longitude?: number
   takenAt?: string
   caption?: string
 }
@@ -30,8 +30,12 @@ export function listTripPhotos(tripId: string): Promise<Photo[]> {
 export function addPhoto(tripId: string, input: AddPhotoInput): Promise<Photo> {
   const formData = new FormData()
   formData.append('image', input.file)
-  formData.append('latitude', String(input.latitude))
-  formData.append('longitude', String(input.longitude))
+  if (input.latitude !== undefined) {
+    formData.append('latitude', String(input.latitude))
+  }
+  if (input.longitude !== undefined) {
+    formData.append('longitude', String(input.longitude))
+  }
   if (input.takenAt !== undefined) {
     formData.append('takenAt', input.takenAt)
   }

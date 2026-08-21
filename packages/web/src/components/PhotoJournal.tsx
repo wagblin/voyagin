@@ -1,8 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TripMap } from '@/components/TripMap'
+import { parseLatLngInput } from '@/lib/coordinates'
+import { parseTakenAtInput } from '@/lib/dateInput'
+import { extractDateTakenFromFile, extractGpsFromFile } from '@/lib/exifLocation'
 import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '@/hooks/useTripPhotos'
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
@@ -29,6 +32,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
   const [file, setFile] = useState<File | null>(null)
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
+  const [takenAt, setTakenAt] = useState('')
   const [caption, setCaption] = useState('')
   const [locationError, setLocationError] = useState<string | null>(null)
   const [isLocating, setIsLocating] = useState(false)
@@ -47,20 +51,51 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
     }
   }
 
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0] ?? null
+    setFile(selectedFile)
+
+    if (!selectedFile) {
+      return
+    }
+
+    const coordinates = await extractGpsFromFile(selectedFile)
+    if (coordinates && latitude.trim() === '' && longitude.trim() === '') {
+      setLatitude(String(coordinates.latitude))
+      setLongitude(String(coordinates.longitude))
+    }
+
+    const dateTaken = await extractDateTakenFromFile(selectedFile)
+    if (dateTaken && takenAt.trim() === '') {
+      setTakenAt(dateTaken)
+    }
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!file || latitude.trim() === '' || longitude.trim() === '') {
+    if (!file) {
+      return
+    }
+    const parsedLocation = parseLatLngInput(latitude, longitude)
+    if (parsedLocation.kind === 'invalid') {
+      return
+    }
+    const parsedTakenAt = parseTakenAtInput(takenAt)
+    if (parsedTakenAt.kind === 'invalid') {
       return
     }
     await addPhoto.mutateAsync({
       file,
-      latitude: Number(latitude),
-      longitude: Number(longitude),
+      ...(parsedLocation.kind === 'valid'
+        ? { latitude: parsedLocation.latitude, longitude: parsedLocation.longitude }
+        : {}),
+      takenAt: parsedTakenAt.kind === 'valid' ? parsedTakenAt.date.toISOString() : new Date().toISOString(),
       ...(caption.trim() ? { caption: caption.trim() } : {}),
     })
     setFile(null)
     setLatitude('')
     setLongitude('')
+    setTakenAt('')
     setCaption('')
   }
 
@@ -86,7 +121,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
             id="photo-file"
             type="file"
             accept="image/*"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => void handleFileChange(event)}
           />
         </div>
 
@@ -116,6 +151,16 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
         {locationError && <p className="text-sm text-destructive">{locationError}</p>}
 
         <div className="flex flex-col gap-2">
+          <Label htmlFor="photo-taken-at">Date de prise</Label>
+          <Input
+            id="photo-taken-at"
+            type="datetime-local"
+            value={takenAt}
+            onChange={(event) => setTakenAt(event.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
           <Label htmlFor="photo-caption">Légende (optionnel)</Label>
           <Input
             id="photo-caption"
@@ -124,7 +169,15 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
           />
         </div>
 
-        <Button type="submit" disabled={addPhoto.isPending || !file}>
+        <Button
+          type="submit"
+          disabled={
+            addPhoto.isPending ||
+            !file ||
+            parseLatLngInput(latitude, longitude).kind === 'invalid' ||
+            parseTakenAtInput(takenAt).kind === 'invalid'
+          }
+        >
           {addPhoto.isPending ? 'Envoi…' : 'Ajouter la photo'}
         </Button>
         {addPhoto.isError && <p className="text-sm text-destructive">{addPhoto.error.message}</p>}

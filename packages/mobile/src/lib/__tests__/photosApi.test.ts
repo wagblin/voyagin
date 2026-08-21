@@ -86,6 +86,18 @@ describe('photosApi', () => {
       expect(appendedFields).not.toContain('caption');
     });
 
+    it('omits latitude and longitude when the location is not provided', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(samplePhoto) });
+      global.fetch = fetchMock as unknown as typeof fetch;
+      const appendSpy = spyOnFormDataAppend();
+
+      await addPhoto('trip-1', { uri: 'file:///tmp/photo.jpg' });
+
+      const appendedFields = appendSpy.mock.calls.map(([field]) => field);
+      expect(appendedFields).not.toContain('latitude');
+      expect(appendedFields).not.toContain('longitude');
+    });
+
     it('throws when the user is not a participant', async () => {
       mockFetchOnce({ ok: false, status: 403, json: () => Promise.resolve({ error: 'Forbidden' }) });
 

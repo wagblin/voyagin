@@ -1,4 +1,4 @@
-import { parseExifCoordinates } from '../exifLocation';
+import { parseExifCoordinates, parseExifDateTaken } from '../exifLocation';
 
 describe('parseExifCoordinates', () => {
   it('returns null when exif is null or undefined', () => {
@@ -58,5 +58,24 @@ describe('parseExifCoordinates', () => {
 
   it('returns null when a GPS value is not a usable number', () => {
     expect(parseExifCoordinates({ GPSLatitude: 'unknown', GPSLongitude: 2.3522 })).toBeNull();
+  });
+});
+
+describe('parseExifDateTaken', () => {
+  it('converts a standard EXIF DateTimeOriginal string ("YYYY:MM:DD HH:mm:ss") to an ISO-like string', () => {
+    expect(parseExifDateTaken({ DateTimeOriginal: '2024:03:15 14:23:00' })).toBe('2024-03-15T14:23:00');
+  });
+
+  it('returns null when exif is null or undefined', () => {
+    expect(parseExifDateTaken(null)).toBeNull();
+    expect(parseExifDateTaken(undefined)).toBeNull();
+  });
+
+  it('returns null when DateTimeOriginal is absent', () => {
+    expect(parseExifDateTaken({ Orientation: 1, Make: 'Apple' })).toBeNull();
+  });
+
+  it('returns null when DateTimeOriginal does not match the expected EXIF pattern', () => {
+    expect(parseExifDateTaken({ DateTimeOriginal: 'not a date' })).toBeNull();
   });
 });

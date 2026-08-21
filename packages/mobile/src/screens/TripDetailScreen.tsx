@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useAuth } from '../hooks/useAuth';
@@ -22,14 +23,15 @@ import {
 } from '../hooks/useTrips';
 import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '../hooks/useTripPhotos';
 import { PhotoMap } from '../components/PhotoMap';
-import { parseExifCoordinates } from '../lib/exifLocation';
+import { extractDateTakenFromFileUri, extractGpsFromFileUri } from '../lib/exifFileLocation';
+import { parseExifCoordinates, parseExifDateTaken } from '../lib/exifLocation';
 import { parseLatLngInput } from '../lib/coordinates';
+import { parseTakenAtInput } from '../lib/dateInput';
 import type { TripParticipant } from '../lib/tripsApi';
 import type { Photo } from '../lib/photosApi';
 
 interface PendingPhoto {
   uri: string;
-  takenAt: string;
 }
 
 export interface TripDetailScreenProps {
@@ -57,6 +59,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
   const [photoLatitude, setPhotoLatitude] = useState('');
   const [photoLongitude, setPhotoLongitude] = useState('');
   const [photoCaption, setPhotoCaption] = useState('');
+  const [photoTakenAt, setPhotoTakenAt] = useState('');
   const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
@@ -124,6 +127,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     setPhotoLatitude('');
     setPhotoLongitude('');
     setPhotoCaption('');
+    setPhotoTakenAt('');
   }
 
   async function handleCapturePhoto() {
@@ -148,10 +152,11 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
 
     const position = await Location.getCurrentPositionAsync({});
 
-    setPendingPhoto({ uri: result.assets[0]!.uri, takenAt: new Date().toISOString() });
+    setPendingPhoto({ uri: result.assets[0]!.uri });
     setPhotoLatitude(String(position.coords.latitude));
     setPhotoLongitude(String(position.coords.longitude));
     setPhotoCaption('');
+    setPhotoTakenAt(new Date().toISOString());
   }
 
   async function handlePickPhoto() {
@@ -170,11 +175,32 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
 
     const asset = result.assets[0]!;
     const coordinates = parseExifCoordinates(asset.exif ?? null);
+    const dateTaken = parseExifDateTaken(asset.exif ?? null);
 
-    setPendingPhoto({ uri: asset.uri, takenAt: new Date().toISOString() });
+    setPendingPhoto({ uri: asset.uri });
     setPhotoLatitude(coordinates ? String(coordinates.latitude) : '');
     setPhotoLongitude(coordinates ? String(coordinates.longitude) : '');
     setPhotoCaption('');
+    setPhotoTakenAt(dateTaken ?? new Date().toISOString());
+  }
+
+  async function handleImportFile() {
+    setCaptureError(null);
+
+    const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true });
+    if (result.canceled) {
+      return;
+    }
+
+    const asset = result.assets[0]!;
+    const coordinates = await extractGpsFromFileUri(asset.uri);
+    const dateTaken = await extractDateTakenFromFileUri(asset.uri);
+
+    setPendingPhoto({ uri: asset.uri });
+    setPhotoLatitude(coordinates ? String(coordinates.latitude) : '');
+    setPhotoLongitude(coordinates ? String(coordinates.longitude) : '');
+    setPhotoCaption('');
+    setPhotoTakenAt(dateTaken ?? new Date().toISOString());
   }
 
   async function handleUseMyLocation() {
@@ -202,19 +228,24 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     }
 
     const coordinates = parseLatLngInput(photoLatitude, photoLongitude);
-    if (coordinates === null) {
+    if (coordinates.kind === 'invalid') {
       return;
     }
-    const { latitude, longitude } = coordinates;
+
+    const takenAt = parseTakenAtInput(photoTakenAt);
+    if (takenAt.kind === 'invalid') {
+      return;
+    }
 
     const trimmedCaption = photoCaption.trim();
 
     addPhotoMutation.mutate(
       {
         uri: pendingPhoto.uri,
-        latitude,
-        longitude,
-        takenAt: pendingPhoto.takenAt,
+        ...(coordinates.kind === 'valid'
+          ? { latitude: coordinates.latitude, longitude: coordinates.longitude }
+          : {}),
+        takenAt: (takenAt.kind === 'valid' ? takenAt.date : new Date()).toISOString(),
         ...(trimmedCaption !== '' ? { caption: trimmedCaption } : {}),
       },
       {
@@ -367,6 +398,14 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
               >
                 <Text style={styles.saveButtonText}>Choisir depuis la bibliothèque</Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveButton, styles.photoActionButton]}
+                onPress={() => void handleImportFile()}
+                testID="import-file-button"
+              >
+                <Text style={styles.saveButtonText}>Importer un fichier</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.pendingPhotoForm}>
@@ -407,10 +446,22 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
                 testID="photo-caption-input"
               />
 
+              <Text style={styles.label}>Date de prise</Text>
+              <TextInput
+                style={styles.input}
+                value={photoTakenAt}
+                onChangeText={setPhotoTakenAt}
+                testID="photo-taken-at-input"
+              />
+
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleConfirmAddPhoto}
-                disabled={addPhotoMutation.isPending || parseLatLngInput(photoLatitude, photoLongitude) === null}
+                disabled={
+                  addPhotoMutation.isPending ||
+                  parseLatLngInput(photoLatitude, photoLongitude).kind === 'invalid' ||
+                  parseTakenAtInput(photoTakenAt).kind === 'invalid'
+                }
                 testID="confirm-add-photo-button"
               >
                 <Text style={styles.saveButtonText}>

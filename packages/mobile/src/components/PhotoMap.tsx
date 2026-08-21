@@ -1,6 +1,9 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import MapView, { Callout, Marker, type Region } from 'react-native-maps';
-import type { Photo } from '../lib/photosApi';
+import MapView, { Callout, Marker, Polyline, type Region } from 'react-native-maps';
+import { chronologicalPhotoRoute, hasPhotoLocation } from '../lib/photoLocations';
+import type { Photo, PhotoLocation } from '../lib/photosApi';
+
+type LocatedPhoto = Photo & { location: PhotoLocation };
 
 const DEFAULT_REGION: Region = {
   latitude: 20,
@@ -9,7 +12,7 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 60,
 };
 
-function averageRegion(photos: Photo[]): Region {
+function averageRegion(photos: LocatedPhoto[]): Region {
   if (photos.length === 0) {
     return DEFAULT_REGION;
   }
@@ -32,11 +35,14 @@ export interface PhotoMapProps {
 }
 
 export function PhotoMap({ photos }: PhotoMapProps) {
-  const region = averageRegion(photos);
+  const locatedPhotos = photos.filter(hasPhotoLocation);
+  const region = averageRegion(locatedPhotos);
+  const route = chronologicalPhotoRoute(photos);
 
   return (
-    <MapView style={styles.map} initialRegion={region} {...(photos.length > 0 ? { region } : {})}>
-      {photos.map((photo) => (
+    <MapView style={styles.map} initialRegion={region} {...(locatedPhotos.length > 0 ? { region } : {})}>
+      {route.length > 1 ? <Polyline coordinates={route} strokeColor="#2563eb" strokeWidth={3} /> : null}
+      {locatedPhotos.map((photo) => (
         <Marker
           key={photo.id}
           coordinate={{ latitude: photo.location.latitude, longitude: photo.location.longitude }}

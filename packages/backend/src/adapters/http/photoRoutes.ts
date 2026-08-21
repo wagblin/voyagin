@@ -30,6 +30,7 @@ export function buildPhotoRoutes(
    *         imageUrl: { type: string }
    *         location:
    *           type: object
+   *           nullable: true
    *           properties:
    *             latitude: { type: number }
    *             longitude: { type: number }
@@ -55,7 +56,7 @@ export function buildPhotoRoutes(
    *         multipart/form-data:
    *           schema:
    *             type: object
-   *             required: [image, latitude, longitude]
+   *             required: [image]
    *             properties:
    *               image: { type: string, format: binary }
    *               latitude: { type: number }
