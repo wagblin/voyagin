@@ -8,7 +8,7 @@ import { InMemoryUserRepository } from '../../user/InMemoryUserRepository';
 import { User } from '../../user/User';
 import { Email } from '../../user/Email';
 import { TripNotFoundError } from '../../trip/errors';
-import { InvalidGeoLocationError } from '../errors';
+import { IncompleteGeoLocationError, InvalidGeoLocationError } from '../errors';
 
 describe('AddPhotoToTripUseCase', () => {
   const buildContext = async () => {
@@ -60,7 +60,8 @@ describe('AddPhotoToTripUseCase', () => {
 
     expect(photo.getTripId()).toBe(trip.id.toString());
     expect(photo.getUploaderId()).toBe(participant.id.toString());
-    expect(photo.getLocation().latitude).toBe(48.8566);
+    // A latitude/longitude pair was provided above, so the location is guaranteed to be defined here.
+    expect(photo.getLocation()!.latitude).toBe(48.8566);
   });
 
   it('lets the trip owner capture a photo too', async () => {
@@ -137,6 +138,51 @@ describe('AddPhotoToTripUseCase', () => {
         takenAt: new Date('2026-08-21T10:30:00Z'),
       }),
     ).rejects.toThrow(NotTripParticipantError);
+  });
+
+  it('lets a participant capture a photo with no geolocation at all', async () => {
+    const { trip, participant, useCase } = await buildContext();
+
+    const photo = await useCase.execute({
+      tripId: trip.id.toString(),
+      uploaderId: participant.id.toString(),
+      imageUrl: 'https://cdn.voyagin.app/photos/eiffel-tower.jpg',
+      latitude: undefined,
+      longitude: undefined,
+      takenAt: new Date('2026-08-21T10:30:00Z'),
+    });
+
+    expect(photo.getLocation()).toBeUndefined();
+  });
+
+  it('rejects a photo with only a latitude and no longitude', async () => {
+    const { trip, participant, useCase } = await buildContext();
+
+    await expect(
+      useCase.execute({
+        tripId: trip.id.toString(),
+        uploaderId: participant.id.toString(),
+        imageUrl: 'https://cdn.voyagin.app/photos/eiffel-tower.jpg',
+        latitude: 48.8566,
+        longitude: undefined,
+        takenAt: new Date('2026-08-21T10:30:00Z'),
+      }),
+    ).rejects.toThrow(IncompleteGeoLocationError);
+  });
+
+  it('rejects a photo with only a longitude and no latitude', async () => {
+    const { trip, participant, useCase } = await buildContext();
+
+    await expect(
+      useCase.execute({
+        tripId: trip.id.toString(),
+        uploaderId: participant.id.toString(),
+        imageUrl: 'https://cdn.voyagin.app/photos/eiffel-tower.jpg',
+        latitude: undefined,
+        longitude: 2.3522,
+        takenAt: new Date('2026-08-21T10:30:00Z'),
+      }),
+    ).rejects.toThrow(IncompleteGeoLocationError);
   });
 
   it('rejects a photo with an out-of-range geolocation', async () => {

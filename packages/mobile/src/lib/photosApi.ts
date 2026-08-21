@@ -10,15 +10,15 @@ export interface Photo {
   tripId: string;
   uploaderId: string;
   imageUrl: string;
-  location: PhotoLocation;
+  location: PhotoLocation | null;
   takenAt: string;
   caption: string | null;
 }
 
 export interface AddPhotoInput {
   uri: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   takenAt?: string;
   caption?: string;
 }
@@ -33,8 +33,10 @@ export async function addPhoto(tripId: string, input: AddPhotoInput): Promise<Ph
   // React Native's FormData accepts a { uri, name, type } file descriptor instead of a DOM
   // Blob/File — there's no type for it in the standard lib, hence the `as any` cast below.
   formData.append('image', { uri: input.uri, name: 'photo.jpg', type: 'image/jpeg' } as any);
-  formData.append('latitude', String(input.latitude));
-  formData.append('longitude', String(input.longitude));
+  if (input.latitude !== undefined && input.longitude !== undefined) {
+    formData.append('latitude', String(input.latitude));
+    formData.append('longitude', String(input.longitude));
+  }
   if (input.takenAt !== undefined) {
     formData.append('takenAt', input.takenAt);
   }

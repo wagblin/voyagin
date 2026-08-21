@@ -11,8 +11,8 @@ import { serializePhoto } from './serializers';
 import type { ImageUploader } from '../storage/ImageUploader';
 
 const addPhotoSchema = z.object({
-  latitude: z.coerce.number(),
-  longitude: z.coerce.number(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
   takenAt: z.coerce.date().optional(),
   caption: z.string().trim().min(1).optional(),
 });

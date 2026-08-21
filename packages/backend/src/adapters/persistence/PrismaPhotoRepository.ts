@@ -9,8 +9,8 @@ export class PrismaPhotoRepository implements PhotoRepository {
       tripId: photo.getTripId(),
       uploaderId: photo.getUploaderId(),
       imageUrl: photo.getImageUrl(),
-      latitude: photo.getLocation().latitude,
-      longitude: photo.getLocation().longitude,
+      latitude: photo.getLocation()?.latitude ?? null,
+      longitude: photo.getLocation()?.longitude ?? null,
       takenAt: photo.getTakenAt(),
       caption: photo.getCaption() ?? null,
     };
@@ -44,18 +44,19 @@ export class PrismaPhotoRepository implements PhotoRepository {
     tripId: string;
     uploaderId: string;
     imageUrl: string;
-    latitude: number;
-    longitude: number;
+    latitude: number | null;
+    longitude: number | null;
     takenAt: Date;
     caption: string | null;
   }): Photo {
+    const location = GeoLocation.createOptional(record.latitude ?? undefined, record.longitude ?? undefined);
     return Photo.reconstitute({
       id: record.id,
       tripId: record.tripId,
       uploaderId: record.uploaderId,
       imageUrl: record.imageUrl,
-      location: GeoLocation.create(record.latitude, record.longitude),
       takenAt: record.takenAt,
+      ...(location !== undefined ? { location } : {}),
       ...(record.caption !== null ? { caption: record.caption } : {}),
     });
   }

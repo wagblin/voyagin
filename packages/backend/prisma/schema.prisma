@@ -48,8 +48,8 @@ model Photo {
   tripId     String
   uploaderId String
   imageUrl   String
-  latitude   Float
-  longitude  Float
+  latitude   Float?
+  longitude  Float?
   takenAt    DateTime
   caption    String?
   trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)

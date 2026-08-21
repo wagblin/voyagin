@@ -10,8 +10,8 @@ export interface AddPhotoToTripInput {
   tripId: string;
   uploaderId: string;
   imageUrl: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | undefined;
+  longitude: number | undefined;
   takenAt: Date;
   caption?: string;
 }
@@ -35,14 +35,14 @@ export class AddPhotoToTripUseCase {
       throw new NotTripParticipantError(input.uploaderId);
     }
 
-    const location = GeoLocation.create(input.latitude, input.longitude);
+    const location = GeoLocation.createOptional(input.latitude, input.longitude);
 
     const photo = Photo.create({
       tripId: input.tripId,
       uploaderId: input.uploaderId,
       imageUrl: input.imageUrl,
-      location,
       takenAt: input.takenAt,
+      ...(location !== undefined ? { location } : {}),
       ...(input.caption !== undefined ? { caption: input.caption } : {}),
     });
 

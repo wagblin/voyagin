@@ -1,10 +1,15 @@
 import { useEffect } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-import type { Photo } from '@/lib/photosApi'
+import type { Photo, PhotoLocation } from '@/lib/photosApi'
+import { chronologicalPhotoRoute, hasPhotoLocation } from '@/lib/photoLocations'
+
+type LocatedPhoto = Photo & { location: PhotoLocation }
+
+const hasLocation = hasPhotoLocation
 
 // Vite doesn't resolve Leaflet's default marker image paths automatically.
 L.Icon.Default.mergeOptions({
@@ -13,7 +18,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 })
 
-function FitToPhotos({ photos }: { photos: Photo[] }) {
+function FitToPhotos({ photos }: { photos: LocatedPhoto[] }) {
   const map = useMap()
 
   useEffect(() => {
@@ -30,15 +35,18 @@ function FitToPhotos({ photos }: { photos: Photo[] }) {
 }
 
 export function TripMap({ photos }: { photos: Photo[] }) {
+  const locatedPhotos = photos.filter(hasLocation)
+  const route = chronologicalPhotoRoute(photos)
+
   const center: [number, number] =
-    photos.length > 0
-      ? [photos[0]!.location.latitude, photos[0]!.location.longitude]
+    locatedPhotos.length > 0
+      ? [locatedPhotos[0]!.location.latitude, locatedPhotos[0]!.location.longitude]
       : [20, 0]
 
   return (
     <MapContainer
       center={center}
-      zoom={photos.length > 0 ? 10 : 2}
+      zoom={locatedPhotos.length > 0 ? 10 : 2}
       scrollWheelZoom
       className="h-80 w-full rounded-lg"
     >
@@ -46,8 +54,9 @@ export function TripMap({ photos }: { photos: Photo[] }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FitToPhotos photos={photos} />
-      {photos.map((photo) => (
+      <FitToPhotos photos={locatedPhotos} />
+      {route.length > 1 && <Polyline positions={route} pathOptions={{ color: '#2563eb' }} />}
+      {locatedPhotos.map((photo) => (
         <Marker key={photo.id} position={[photo.location.latitude, photo.location.longitude]}>
           <Popup>
             <img src={photo.imageUrl} alt={photo.caption ?? ''} className="mb-2 w-40 rounded" />

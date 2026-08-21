@@ -1,4 +1,4 @@
-import { InvalidGeoLocationError } from './errors';
+import { IncompleteGeoLocationError, InvalidGeoLocationError } from './errors';
 
 export class GeoLocation {
   private constructor(
@@ -11,5 +11,15 @@ export class GeoLocation {
       throw new InvalidGeoLocationError(latitude, longitude);
     }
     return new GeoLocation(latitude, longitude);
+  }
+
+  static createOptional(latitude: number | undefined, longitude: number | undefined): GeoLocation | undefined {
+    if (latitude === undefined && longitude === undefined) {
+      return undefined;
+    }
+    if (latitude === undefined || longitude === undefined) {
+      throw new IncompleteGeoLocationError();
+    }
+    return GeoLocation.create(latitude, longitude);
   }
 }

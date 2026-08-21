@@ -51,6 +51,18 @@ describe('Photo', () => {
     it('rejects an empty uploader id', () => {
       expect(() => Photo.create({ ...baseProps, uploaderId: '' })).toThrow(InvalidUploaderIdError);
     });
+
+    it('creates a photo without a location when none is provided', () => {
+      const propsWithoutLocation = {
+        tripId: baseProps.tripId,
+        uploaderId: baseProps.uploaderId,
+        imageUrl: baseProps.imageUrl,
+        takenAt: baseProps.takenAt,
+      };
+      const photo = Photo.create(propsWithoutLocation);
+
+      expect(photo.getLocation()).toBeUndefined();
+    });
   });
 
   describe('reconstitute', () => {
@@ -85,6 +97,18 @@ describe('Photo', () => {
       });
 
       expect(photo.getCaption()).toBeUndefined();
+    });
+
+    it('rebuilds a photo that has no location', () => {
+      const photo = Photo.reconstitute({
+        id: 'photo-123',
+        tripId: 'trip-1',
+        uploaderId: 'user-1',
+        imageUrl: 'https://cdn.voyagin.app/photos/eiffel-tower.jpg',
+        takenAt,
+      });
+
+      expect(photo.getLocation()).toBeUndefined();
     });
   });
 });

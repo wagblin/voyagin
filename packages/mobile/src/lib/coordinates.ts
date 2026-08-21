@@ -3,6 +3,11 @@ export interface LatLng {
   longitude: number;
 }
 
+export type ParsedLatLngInput =
+  | { kind: 'none' }
+  | { kind: 'invalid' }
+  | ({ kind: 'valid' } & LatLng);
+
 function toNumber(input: string): number | null {
   if (input.trim() === '') {
     return null;
@@ -12,14 +17,18 @@ function toNumber(input: string): number | null {
 }
 
 // Parses the free-text latitude/longitude fields a user can edit before confirming a photo's
-// location. Returns `null` whenever either field is empty, whitespace-only, or not a valid
-// number, so callers can disable submission without needing to duplicate this validation.
-export function parseLatLngInput(latitudeInput: string, longitudeInput: string): LatLng | null {
+// location. Both fields empty means the photo has no location (allowed). Exactly one filled, or
+// either filled with a non-numeric value, is invalid and blocks submission.
+export function parseLatLngInput(latitudeInput: string, longitudeInput: string): ParsedLatLngInput {
+  if (latitudeInput.trim() === '' && longitudeInput.trim() === '') {
+    return { kind: 'none' };
+  }
+
   const latitude = toNumber(latitudeInput);
   const longitude = toNumber(longitudeInput);
   if (latitude === null || longitude === null) {
-    return null;
+    return { kind: 'invalid' };
   }
 
-  return { latitude, longitude };
+  return { kind: 'valid', latitude, longitude };
 }

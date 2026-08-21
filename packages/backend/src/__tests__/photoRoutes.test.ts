@@ -44,6 +44,54 @@ describe('POST /api/trips/:id/photos', () => {
     });
   });
 
+  it('adds a photo with no geolocation when latitude and longitude are omitted', async () => {
+    const app = buildTestApp();
+    const token = await registerAndGetToken(app);
+    const tripId = await createTrip(app, token);
+
+    const response = await request(app)
+      .post(`/api/trips/${tripId}/photos`)
+      .set('Authorization', `Bearer ${token}`)
+      .field('takenAt', '2026-09-01T10:00:00.000Z')
+      .field('caption', 'No location for this one')
+      .attach('image', Buffer.from('fake-image-bytes'), 'photo.jpg');
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      tripId,
+      location: null,
+      caption: 'No location for this one',
+    });
+  });
+
+  it('rejects a request providing only a latitude with a 400', async () => {
+    const app = buildTestApp();
+    const token = await registerAndGetToken(app);
+    const tripId = await createTrip(app, token);
+
+    const response = await request(app)
+      .post(`/api/trips/${tripId}/photos`)
+      .set('Authorization', `Bearer ${token}`)
+      .field('latitude', '48.8566')
+      .attach('image', Buffer.from('fake-image-bytes'), 'photo.jpg');
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects a request providing only a longitude with a 400', async () => {
+    const app = buildTestApp();
+    const token = await registerAndGetToken(app);
+    const tripId = await createTrip(app, token);
+
+    const response = await request(app)
+      .post(`/api/trips/${tripId}/photos`)
+      .set('Authorization', `Bearer ${token}`)
+      .field('longitude', '2.3522')
+      .attach('image', Buffer.from('fake-image-bytes'), 'photo.jpg');
+
+    expect(response.status).toBe(400);
+  });
+
   it('rejects an unauthenticated request', async () => {
     const app = buildTestApp();
     const response = await request(app)
@@ -119,6 +167,24 @@ describe('GET /api/trips/:id/photos', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveLength(1);
+  });
+
+  it("lists a photo with no geolocation as a null location", async () => {
+    const app = buildTestApp();
+    const token = await registerAndGetToken(app);
+    const tripId = await createTrip(app, token);
+    await request(app)
+      .post(`/api/trips/${tripId}/photos`)
+      .set('Authorization', `Bearer ${token}`)
+      .attach('image', Buffer.from('fake-image-bytes'), 'photo.jpg');
+
+    const response = await request(app)
+      .get(`/api/trips/${tripId}/photos`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({ location: null });
   });
 
   it('returns 403 for a non-participant', async () => {

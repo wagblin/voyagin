@@ -6,7 +6,7 @@ export interface CreatePhotoProps {
   tripId: string;
   uploaderId: string;
   imageUrl: string;
-  location: GeoLocation;
+  location?: GeoLocation;
   takenAt: Date;
   caption?: string;
 }
@@ -16,7 +16,7 @@ export interface ReconstitutePhotoProps {
   tripId: string;
   uploaderId: string;
   imageUrl: string;
-  location: GeoLocation;
+  location?: GeoLocation;
   takenAt: Date;
   caption?: string;
 }
@@ -27,7 +27,7 @@ export class Photo {
     private readonly tripId: string,
     private readonly uploaderId: string,
     private readonly imageUrl: string,
-    private readonly location: GeoLocation,
+    private readonly location: GeoLocation | undefined,
     private readonly takenAt: Date,
     private readonly caption: string | undefined,
   ) {}
@@ -77,7 +77,7 @@ export class Photo {
     return this.imageUrl;
   }
 
-  getLocation(): GeoLocation {
+  getLocation(): GeoLocation | undefined {
     return this.location;
   }
 

@@ -45,3 +45,29 @@ export function parseExifCoordinates(exif: Record<string, unknown> | null | unde
     longitude: applyHemisphereSign(rawLongitude, exif.GPSLongitudeRef),
   };
 }
+
+const EXIF_DATE_TIME_PATTERN = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}:\d{2}:\d{2})$/;
+
+// Best-effort extraction of the date a photo was taken from its EXIF metadata (as returned by
+// `ImagePicker.launchImageLibraryAsync({ exif: true })`). EXIF stores DateTimeOriginal in its own
+// native format ("YYYY:MM:DD HH:mm:ss") rather than ISO 8601, so this converts it. Many photos have
+// no such metadata at all — that's expected, not an error — so this returns `null` instead of
+// throwing whenever the tag is absent or doesn't match the expected pattern.
+export function parseExifDateTaken(exif: Record<string, unknown> | null | undefined): string | null {
+  if (exif === null || exif === undefined) {
+    return null;
+  }
+
+  const dateTimeOriginal = exif.DateTimeOriginal;
+  if (typeof dateTimeOriginal !== 'string') {
+    return null;
+  }
+
+  const match = EXIF_DATE_TIME_PATTERN.exec(dateTimeOriginal);
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, time] = match;
+  return `${year}-${month}-${day}T${time}`;
+}

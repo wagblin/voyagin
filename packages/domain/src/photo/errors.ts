@@ -5,6 +5,13 @@ export class InvalidGeoLocationError extends Error {
   }
 }
 
+export class IncompleteGeoLocationError extends Error {
+  constructor() {
+    super('Geolocation requires both a latitude and a longitude.');
+    this.name = 'IncompleteGeoLocationError';
+  }
+}
+
 export class InvalidImageUrlError extends Error {
   constructor() {
     super('Photo image url must not be empty.');
