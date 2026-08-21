@@ -81,7 +81,7 @@ Une fois le backend lancé, la documentation interactive (OpenAPI/Swagger) est d
 Fonctionnalités actuelles :
 - **Comptes utilisateurs** : inscription, connexion, déconnexion, modification du profil, suppression du compte.
 - **Voyages** : création, consultation, modification, suppression, gestion des participants (ajout/retrait) — réservée à l'organisateur du voyage.
-- **Carnet photo géolocalisé** : ajout d'une photo (avec position GPS et horodatage) à un voyage — réservé aux participants ; liste et suppression (auteur de la photo ou organisateur du voyage) ; affichage sur une carte interactive (web et mobile).
+- **Carnet photo géolocalisé** : ajout d'une photo (avec position GPS et horodatage) à un voyage — réservé aux participants ; liste et suppression (auteur de la photo ou organisateur du voyage) ; affichage sur une carte interactive (web et mobile). La photo peut venir de l'appareil photo (position GPS capturée en direct) ou de la bibliothèque/du système de fichiers (position pré-remplie depuis les métadonnées EXIF si présentes, sinon saisie manuelle) — latitude/longitude toujours modifiables avant l'envoi.
 
 ## Déploiement
 

@@ -23,6 +23,7 @@ import {
 import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '../hooks/useTripPhotos';
 import { PhotoMap } from '../components/PhotoMap';
 import { parseExifCoordinates } from '../lib/exifLocation';
+import { parseLatLngInput } from '../lib/coordinates';
 import type { TripParticipant } from '../lib/tripsApi';
 import type { Photo } from '../lib/photosApi';
 
@@ -200,11 +201,11 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
       return;
     }
 
-    const latitude = Number(photoLatitude);
-    const longitude = Number(photoLongitude);
-    if (photoLatitude.trim() === '' || photoLongitude.trim() === '' || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+    const coordinates = parseLatLngInput(photoLatitude, photoLongitude);
+    if (coordinates === null) {
       return;
     }
+    const { latitude, longitude } = coordinates;
 
     const trimmedCaption = photoCaption.trim();
 
@@ -409,13 +410,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleConfirmAddPhoto}
-                disabled={
-                  addPhotoMutation.isPending ||
-                  photoLatitude.trim() === '' ||
-                  photoLongitude.trim() === '' ||
-                  Number.isNaN(Number(photoLatitude)) ||
-                  Number.isNaN(Number(photoLongitude))
-                }
+                disabled={addPhotoMutation.isPending || parseLatLngInput(photoLatitude, photoLongitude) === null}
                 testID="confirm-add-photo-button"
               >
                 <Text style={styles.saveButtonText}>
