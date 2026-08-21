@@ -1,13 +1,9 @@
-import type { ExifCoordinates } from './exifLocation';
+import piexif from 'piexifjs';
+import { parseExifDateTaken, type ExifCoordinates } from './exifLocation';
 
 interface LegacyFileSystemModule {
   readAsStringAsync: (fileUri: string, options?: { encoding?: 'utf8' | 'base64' }) => Promise<string>;
   EncodingType: { UTF8: 'utf8'; Base64: 'base64' };
-}
-
-interface ExifrModule {
-  gps: (input: Uint8Array) => Promise<{ latitude: number; longitude: number } | undefined>;
-  parse: (input: Uint8Array) => Promise<{ DateTimeOriginal?: Date } | undefined>;
 }
 
 // expo-file-system/legacy n'a pas de .d.ts publié pour ce sous-chemin : un `import` statique force
@@ -19,12 +15,14 @@ const FileSystem = require('expo-file-system/legacy') as LegacyFileSystemModule;
 
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
-function decodeBase64ToBytes(base64: string): Uint8Array {
+// piexifjs expects a "binary string" (one JS string character = one byte, values 0-255), not a
+// byte array — this is the string representation used by browser-era EXIF tooling. Decoded here
+// character by character rather than via `atob`/`Buffer`: neither is guaranteed to exist under
+// Hermes on React Native, and a hidden dependency on either has already caused a production crash
+// once this session (see exifr replacement below) — no shortcuts.
+export function decodeBase64ToBinaryString(base64: string): string {
   const cleaned = base64.replace(/[^A-Za-z0-9+/]/g, '');
-  const byteLength = Math.floor((cleaned.length * 6) / 8);
-  const bytes = new Uint8Array(byteLength);
-
-  let byteIndex = 0;
+  let binaryString = '';
   let buffer = 0;
   let bitsInBuffer = 0;
 
@@ -37,80 +35,58 @@ function decodeBase64ToBytes(base64: string): Uint8Array {
     bitsInBuffer += 6;
     if (bitsInBuffer >= 8) {
       bitsInBuffer -= 8;
-      bytes[byteIndex] = (buffer >> bitsInBuffer) & 0xff;
-      byteIndex += 1;
+      binaryString += String.fromCharCode((buffer >> bitsInBuffer) & 0xff);
     }
   }
 
-  return bytes;
+  return binaryString;
 }
 
-async function readFileBytes(uri: string): Promise<Uint8Array> {
+async function readFileAsBinaryString(uri: string): Promise<string> {
   const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-  return decodeBase64ToBytes(base64);
-}
-
-// exifr lit `navigator.userAgent` dans le code de son module (pas dans une fonction) pour
-// détecter iPad, en supposant qu'il est toujours défini. Sur un vrai appareil RN (Hermes),
-// `navigator` existe mais `navigator.userAgent` est `undefined`, ce qui fait planter exifr dès
-// son chargement. On force une valeur sûre juste avant le `require()` paresseux ci-dessous,
-// qui reporte le chargement/exécution du module exifr jusqu'ici plutôt qu'au chargement du bundle.
-function loadExifr(): ExifrModule {
-  if (typeof navigator === 'object' && navigator.userAgent === undefined) {
-    (navigator as { userAgent: string }).userAgent = 'ReactNative';
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- chargement paresseux nécessaire, voir commentaire ci-dessus
-  return require('exifr') as ExifrModule;
+  return decodeBase64ToBinaryString(base64);
 }
 
 // Best-effort extraction of GPS coordinates from a file's EXIF metadata, for images imported via
 // the document picker (which — unlike the image picker — doesn't return EXIF data directly, only
-// a file URI). Reads the file as base64, decodes it to bytes, and lets exifr parse the GPS tags.
-// Many files have no GPS metadata, and reading/parsing can fail for unsupported formats — none of
-// that is an error, so this always resolves to `null` instead of throwing.
+// a file URI). Reads the file as base64, decodes it to a binary string, and lets piexifjs (zero
+// dependencies, no `navigator`/`atob`/`Buffer` usage — unlike the previous `exifr`-based
+// implementation, which crashed iOS Release builds under Hermes) parse the GPS tags. Many files
+// have no GPS metadata, and reading/parsing can fail for unsupported formats — none of that is an
+// error, so this always resolves to `null` instead of throwing.
 export async function extractGpsFromFileUri(uri: string): Promise<ExifCoordinates | null> {
   try {
-    const bytes = await readFileBytes(uri);
-    const { gps } = loadExifr();
-    const coordinates = await gps(bytes);
-    if (!coordinates) {
+    const binaryString = await readFileAsBinaryString(uri);
+    const exifDict = piexif.load(binaryString);
+    const latitude = exifDict.GPS?.[piexif.GPSIFD.GPSLatitude];
+    const latitudeRef = exifDict.GPS?.[piexif.GPSIFD.GPSLatitudeRef];
+    const longitude = exifDict.GPS?.[piexif.GPSIFD.GPSLongitude];
+    const longitudeRef = exifDict.GPS?.[piexif.GPSIFD.GPSLongitudeRef];
+    if (latitude === undefined || latitudeRef === undefined || longitude === undefined || longitudeRef === undefined) {
       return null;
     }
 
-    return { latitude: coordinates.latitude, longitude: coordinates.longitude };
+    return {
+      latitude: piexif.GPSHelper.dmsRationalToDeg(latitude, latitudeRef),
+      longitude: piexif.GPSHelper.dmsRationalToDeg(longitude, longitudeRef),
+    };
   } catch {
     return null;
   }
 }
 
-function formatLocalDateTime(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  const seconds = pad(date.getSeconds());
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-}
-
 // Best-effort extraction of the date a file's photo was taken from its EXIF metadata, for images
-// imported via the document picker. Reads the file as base64, decodes it to bytes, and lets exifr
-// parse the DateTimeOriginal tag, which it returns as a `Date` object — formatted here in local
-// time (not `toISOString()`, which is UTC). Many files have no such metadata, and reading/parsing
-// can fail for unsupported formats — none of that is an error, so this always resolves to `null`
-// instead of throwing.
+// imported via the document picker. Reads the file as base64, decodes it to a binary string, and
+// lets piexifjs parse the DateTimeOriginal tag — reusing `parseExifDateTaken` (shared with the
+// image picker's EXIF handling) rather than duplicating the "YYYY:MM:DD HH:mm:ss" parsing logic.
+// Many files have no such metadata, and reading/parsing can fail for unsupported formats — none of
+// that is an error, so this always resolves to `null` instead of throwing.
 export async function extractDateTakenFromFileUri(uri: string): Promise<string | null> {
   try {
-    const bytes = await readFileBytes(uri);
-    const { parse } = loadExifr();
-    const metadata = await parse(bytes);
-    if (!metadata?.DateTimeOriginal) {
-      return null;
-    }
-
-    return formatLocalDateTime(metadata.DateTimeOriginal);
+    const binaryString = await readFileAsBinaryString(uri);
+    const exifDict = piexif.load(binaryString);
+    const dateTimeOriginal = exifDict.Exif?.[piexif.ExifIFD.DateTimeOriginal];
+    return parseExifDateTaken({ DateTimeOriginal: dateTimeOriginal });
   } catch {
     return null;
   }

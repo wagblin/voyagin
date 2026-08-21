@@ -6,6 +6,7 @@ import { TripMap } from '@/components/TripMap'
 import { parseLatLngInput } from '@/lib/coordinates'
 import { parseTakenAtInput } from '@/lib/dateInput'
 import { extractDateTakenFromFile, extractGpsFromFile } from '@/lib/exifLocation'
+import { cloudinaryThumbnailUrl } from '@/lib/cloudinary'
 import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '@/hooks/useTripPhotos'
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
@@ -191,7 +192,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
           {photos.map((photo) => (
             <div key={photo.id} className="flex flex-col gap-1">
               <img
-                src={photo.imageUrl}
+                src={cloudinaryThumbnailUrl(photo.imageUrl, 300)}
                 alt={photo.caption ?? ''}
                 className="aspect-square w-full rounded-lg object-cover"
               />

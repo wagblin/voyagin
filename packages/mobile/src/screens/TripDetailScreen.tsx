@@ -27,6 +27,7 @@ import { extractDateTakenFromFileUri, extractGpsFromFileUri } from '../lib/exifF
 import { parseExifCoordinates, parseExifDateTaken } from '../lib/exifLocation';
 import { parseLatLngInput } from '../lib/coordinates';
 import { parseTakenAtInput } from '../lib/dateInput';
+import { cloudinaryThumbnailUrl } from '../lib/cloudinary';
 import type { TripParticipant } from '../lib/tripsApi';
 import type { Photo } from '../lib/photosApi';
 
@@ -489,7 +490,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
           <View style={styles.photoGrid}>
             {(photosQuery.data ?? []).map((photo) => (
               <View key={photo.id} style={styles.photoCard}>
-                <Image source={{ uri: photo.imageUrl }} style={styles.photoImage} />
+                <Image source={{ uri: cloudinaryThumbnailUrl(photo.imageUrl, 300) }} style={styles.photoImage} />
                 {photo.caption ? <Text style={styles.photoCaption}>{photo.caption}</Text> : null}
                 {canDeletePhoto(photo) ? (
                   <TouchableOpacity

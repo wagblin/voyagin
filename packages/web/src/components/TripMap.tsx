@@ -6,6 +6,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import type { Photo, PhotoLocation } from '@/lib/photosApi'
 import { chronologicalPhotoRoute, hasPhotoLocation } from '@/lib/photoLocations'
+import { cloudinaryThumbnailUrl } from '@/lib/cloudinary'
 
 type LocatedPhoto = Photo & { location: PhotoLocation }
 
@@ -59,7 +60,11 @@ export function TripMap({ photos }: { photos: Photo[] }) {
       {locatedPhotos.map((photo) => (
         <Marker key={photo.id} position={[photo.location.latitude, photo.location.longitude]}>
           <Popup>
-            <img src={photo.imageUrl} alt={photo.caption ?? ''} className="mb-2 w-40 rounded" />
+            <img
+              src={cloudinaryThumbnailUrl(photo.imageUrl, 320)}
+              alt={photo.caption ?? ''}
+              className="mb-2 w-40 rounded"
+            />
             {photo.caption && <p className="text-sm">{photo.caption}</p>}
             <p className="text-xs text-muted-foreground">
               {new Date(photo.takenAt).toLocaleString()}

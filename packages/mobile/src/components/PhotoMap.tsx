@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import MapView, { Callout, Marker, Polyline, type Region } from 'react-native-maps';
 import { chronologicalPhotoRoute, hasPhotoLocation } from '../lib/photoLocations';
+import { cloudinaryThumbnailUrl } from '../lib/cloudinary';
 import type { Photo, PhotoLocation } from '../lib/photosApi';
 
 type LocatedPhoto = Photo & { location: PhotoLocation };
@@ -49,7 +50,7 @@ export function PhotoMap({ photos }: PhotoMapProps) {
         >
           <Callout>
             <View style={styles.callout}>
-              <Image source={{ uri: photo.imageUrl }} style={styles.calloutImage} />
+              <Image source={{ uri: cloudinaryThumbnailUrl(photo.imageUrl, 320) }} style={styles.calloutImage} />
               {photo.caption ? <Text style={styles.calloutCaption}>{photo.caption}</Text> : null}
               <Text style={styles.calloutDate}>{new Date(photo.takenAt).toLocaleString()}</Text>
             </View>
