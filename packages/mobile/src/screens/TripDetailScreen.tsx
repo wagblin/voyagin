@@ -320,10 +320,11 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingTop: 60,
+    paddingBottom: 40,
     gap: 8,
   },
   backText: {
