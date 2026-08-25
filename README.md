@@ -82,6 +82,7 @@ Fonctionnalités actuelles :
 - **Comptes utilisateurs** : inscription, connexion, déconnexion, modification du profil, suppression du compte.
 - **Voyages** : création, consultation, modification, suppression, gestion des participants (ajout/retrait) — réservée à l'organisateur du voyage.
 - **Carnet photo avec géolocalisation optionnelle** : ajout d'une photo (avec horodatage) à un voyage — réservé aux participants ; liste et suppression (auteur de la photo ou organisateur du voyage) ; affichage sur une carte interactive (web et mobile) avec tracé chronologique reliant les positions connues, dans l'ordre de prise de vue. La photo peut venir de l'appareil photo (position GPS capturée en direct), de la bibliothèque (web et mobile), ou — sur mobile uniquement — d'un fichier importé depuis le sélecteur système (Fichiers/iCloud Drive/Drive). Pour la bibliothèque et l'import de fichier, la position est extraite automatiquement des métadonnées EXIF si présentes ; sinon elle peut être saisie manuellement, ou laissée vide — la géolocalisation n'est jamais obligatoire pour ajouter une photo. Latitude/longitude toujours modifiables avant l'envoi.
+- **Saisie des dates** : sur web, champs natifs du navigateur (`<input type="date">`/`datetime-local`). Sur mobile, sélecteur de date natif (`@react-native-community/datetimepicker`) pour les dates de début/fin d'un voyage et la date de prise de vue d'une photo — plus fiable qu'une saisie en texte libre.
 
 ## Déploiement
 

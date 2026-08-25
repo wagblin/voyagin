@@ -56,7 +56,7 @@ export function AccountPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col gap-6 p-8">
-      <Link to="/" className="text-sm text-muted-foreground underline underline-offset-4">
+      <Link to="/" className="text-sm text-primary underline underline-offset-4">
         ← Retour aux voyages
       </Link>
 
@@ -85,7 +85,11 @@ export function AccountPage() {
             </Button>
           </form>
 
-          <Button variant="ghost" onClick={() => void handleLogout()}>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={() => void handleLogout()}
+          >
             Déconnexion
           </Button>
 

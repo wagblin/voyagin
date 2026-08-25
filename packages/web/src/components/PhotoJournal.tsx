@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,6 +37,15 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
   const [caption, setCaption] = useState('')
   const [locationError, setLocationError] = useState<string | null>(null)
   const [isLocating, setIsLocating] = useState(false)
+
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+
+  useEffect(() => {
+    if (!previewUrl) {
+      return
+    }
+    return () => URL.revokeObjectURL(previewUrl)
+  }, [previewUrl])
 
   async function handleUseMyLocation() {
     setLocationError(null)
@@ -124,6 +133,9 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
             accept="image/*"
             onChange={(event) => void handleFileChange(event)}
           />
+          {previewUrl && (
+            <img src={previewUrl} alt="Aperçu" className="aspect-square w-40 rounded-lg object-cover" />
+          )}
         </div>
 
         <div className="flex items-end gap-2">
@@ -145,11 +157,20 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
               onChange={(event) => setLongitude(event.target.value)}
             />
           </div>
-          <Button type="button" variant="outline" onClick={() => void handleUseMyLocation()} disabled={isLocating}>
+          <Button type="button" onClick={() => void handleUseMyLocation()} disabled={isLocating}>
             {isLocating ? '…' : 'Ma position'}
           </Button>
         </div>
         {locationError && <p className="text-sm text-destructive">{locationError}</p>}
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="photo-caption">Légende (optionnel)</Label>
+          <Input
+            id="photo-caption"
+            value={caption}
+            onChange={(event) => setCaption(event.target.value)}
+          />
+        </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="photo-taken-at">Date de prise</Label>
@@ -158,15 +179,6 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
             type="datetime-local"
             value={takenAt}
             onChange={(event) => setTakenAt(event.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="photo-caption">Légende (optionnel)</Label>
-          <Input
-            id="photo-caption"
-            value={caption}
-            onChange={(event) => setCaption(event.target.value)}
           />
         </div>
 
@@ -202,6 +214,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="text-destructive hover:text-destructive"
                   disabled={deletePhoto.isPending}
                   onClick={() => void handleDelete(photo.id)}
                 >

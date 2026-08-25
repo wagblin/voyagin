@@ -35,10 +35,14 @@ export function TripsPage() {
           <p className="text-sm text-muted-foreground">Connecté en tant que {user?.name}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
+          <Button variant="link" asChild>
             <Link to="/account">Mon compte</Link>
           </Button>
-          <Button variant="ghost" onClick={() => void handleLogout()}>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={() => void handleLogout()}
+          >
             Déconnexion
           </Button>
         </div>

@@ -101,7 +101,7 @@ export function TripDetailPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-8">
-      <Link to="/" className="text-sm text-muted-foreground underline underline-offset-4">
+      <Link to="/" className="text-sm text-primary underline underline-offset-4">
         ← Retour aux voyages
       </Link>
 
@@ -160,6 +160,7 @@ export function TripDetailPage() {
                       type="button"
                       variant="ghost"
                       size="sm"
+                      className="text-destructive hover:text-destructive"
                       disabled={removeParticipant.isPending}
                       onClick={() => void handleRemoveParticipant(participant.userId, participant.name)}
                     >

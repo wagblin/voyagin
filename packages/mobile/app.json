@@ -41,7 +41,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "VoyagIn a besoin de votre position pour géolocaliser les photos de votre carnet de voyage."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }
