@@ -1,5 +1,6 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
-import MapView, { Callout, Marker, Polyline, type Region } from 'react-native-maps';
+import { useState } from 'react';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polyline, type Region } from 'react-native-maps';
 import { chronologicalPhotoRoute, hasPhotoLocation } from '../lib/photoLocations';
 import { cloudinaryThumbnailUrl } from '../lib/cloudinary';
 import type { Photo, PhotoLocation } from '../lib/photosApi';
@@ -36,28 +37,50 @@ export interface PhotoMapProps {
 }
 
 export function PhotoMap({ photos }: PhotoMapProps) {
+  const [selectedPhoto, setSelectedPhoto] = useState<LocatedPhoto | null>(null);
   const locatedPhotos = photos.filter(hasPhotoLocation);
   const region = averageRegion(locatedPhotos);
   const route = chronologicalPhotoRoute(photos);
 
   return (
-    <MapView style={styles.map} initialRegion={region} {...(locatedPhotos.length > 0 ? { region } : {})}>
-      {route.length > 1 ? <Polyline coordinates={route} strokeColor="#2563eb" strokeWidth={3} /> : null}
-      {locatedPhotos.map((photo) => (
-        <Marker
-          key={photo.id}
-          coordinate={{ latitude: photo.location.latitude, longitude: photo.location.longitude }}
-        >
-          <Callout>
-            <View style={styles.callout}>
-              <Image source={{ uri: cloudinaryThumbnailUrl(photo.imageUrl, 320) }} style={styles.calloutImage} />
-              {photo.caption ? <Text style={styles.calloutCaption}>{photo.caption}</Text> : null}
-              <Text style={styles.calloutDate}>{new Date(photo.takenAt).toLocaleString()}</Text>
+    <>
+      <MapView style={styles.map} initialRegion={region} {...(locatedPhotos.length > 0 ? { region } : {})}>
+        {route.length > 1 ? <Polyline coordinates={route} strokeColor="#2563eb" strokeWidth={3} /> : null}
+        {locatedPhotos.map((photo) => (
+          <Marker
+            key={photo.id}
+            coordinate={{ latitude: photo.location.latitude, longitude: photo.location.longitude }}
+            onPress={() => setSelectedPhoto(photo)}
+          />
+        ))}
+      </MapView>
+      <Modal
+        visible={selectedPhoto !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPhoto(null)}
+      >
+        {selectedPhoto ? (
+          <View style={styles.overlay}>
+            <View style={styles.card}>
+              <Image
+                source={{ uri: cloudinaryThumbnailUrl(selectedPhoto.imageUrl, 320) }}
+                style={styles.cardImage}
+              />
+              {selectedPhoto.caption ? <Text style={styles.cardCaption}>{selectedPhoto.caption}</Text> : null}
+              <Text style={styles.cardDate}>{new Date(selectedPhoto.takenAt).toLocaleString()}</Text>
+              <Pressable
+                testID="photo-modal-close"
+                style={styles.closeButton}
+                onPress={() => setSelectedPhoto(null)}
+              >
+                <Text style={styles.closeButtonLabel}>Fermer</Text>
+              </Pressable>
             </View>
-          </Callout>
-        </Marker>
-      ))}
-    </MapView>
+          </View>
+        ) : null}
+      </Modal>
+    </>
   );
 }
 
@@ -67,21 +90,43 @@ const styles = StyleSheet.create({
     height: 220,
     borderRadius: 12,
   },
-  callout: {
-    width: 160,
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  calloutImage: {
+  card: {
     width: '100%',
-    height: 100,
-    borderRadius: 6,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  cardImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  cardCaption: {
+    fontSize: 15,
+    fontWeight: '600',
     marginBottom: 4,
   },
-  calloutCaption: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  calloutDate: {
-    fontSize: 11,
+  cardDate: {
+    fontSize: 12,
     color: '#6b7280',
+    marginBottom: 12,
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#2563eb',
+    borderRadius: 6,
+  },
+  closeButtonLabel: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
