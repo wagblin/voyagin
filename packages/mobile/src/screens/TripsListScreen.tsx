@@ -6,10 +6,11 @@ import type { Trip } from '../lib/tripsApi';
 
 export interface TripsListScreenProps {
   onSelectTrip: (id: string) => void;
+  onOpenAccount: () => void;
 }
 
-export function TripsListScreen({ onSelectTrip }: TripsListScreenProps) {
-  const { logout } = useAuth();
+export function TripsListScreen({ onSelectTrip, onOpenAccount }: TripsListScreenProps) {
+  const { user, logout } = useAuth();
   const tripsQuery = useTripsQuery();
   const createTripMutation = useCreateTripMutation();
   const [newTripName, setNewTripName] = useState('');
@@ -30,12 +31,21 @@ export function TripsListScreen({ onSelectTrip }: TripsListScreenProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mes voyages</Text>
-        <TouchableOpacity onPress={() => void logout()} testID="logout-button">
-          <Text style={styles.logoutText}>Déconnexion</Text>
-        </TouchableOpacity>
+        <View>
+          <Text style={styles.title}>Mes voyages</Text>
+          <Text style={styles.subtitle}>Connecté en tant que {user?.name}</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={onOpenAccount} testID="account-button">
+            <Text style={styles.accountText}>Mon compte</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => void logout()} testID="logout-button">
+            <Text style={styles.logoutText}>Déconnexion</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
+      <Text style={styles.sectionTitle}>Nouveau voyage</Text>
       <View style={styles.createForm}>
         <TextInput
           style={styles.input}
@@ -50,7 +60,7 @@ export function TripsListScreen({ onSelectTrip }: TripsListScreenProps) {
           disabled={createTripMutation.isPending}
           testID="create-trip-button"
         >
-          <Text style={styles.createButtonText}>{createTripMutation.isPending ? '...' : 'Ajouter'}</Text>
+          <Text style={styles.createButtonText}>{createTripMutation.isPending ? '...' : 'Créer'}</Text>
         </TouchableOpacity>
       </View>
       {createTripMutation.isError ? <Text style={styles.error}>{createTripMutation.error.message}</Text> : null}
@@ -65,6 +75,7 @@ export function TripsListScreen({ onSelectTrip }: TripsListScreenProps) {
           renderItem={({ item }: { item: Trip }) => (
             <TouchableOpacity style={styles.tripItem} onPress={() => onSelectTrip(item.id)}>
               <Text style={styles.tripName}>{item.name}</Text>
+              <Text style={styles.tripParticipants}>{item.participants.length} participant(s)</Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={<Text style={styles.emptyText}>Aucun voyage pour le moment.</Text>}
@@ -91,8 +102,26 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
   },
+  subtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  accountText: {
+    color: '#2563eb',
+  },
   logoutText: {
     color: '#dc2626',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   createForm: {
     flexDirection: 'row',
@@ -132,6 +161,11 @@ const styles = StyleSheet.create({
   },
   tripName: {
     fontSize: 16,
+  },
+  tripParticipants: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
   },
   emptyText: {
     color: '#6b7280',

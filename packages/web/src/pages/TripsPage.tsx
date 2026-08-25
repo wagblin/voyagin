@@ -51,7 +51,7 @@ export function TripsPage() {
         <CardContent>
           <form className="flex gap-2" onSubmit={(event) => void handleCreate(event)}>
             <Input
-              placeholder="Bali sabbatical"
+              placeholder="Nom du voyage"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />

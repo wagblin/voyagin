@@ -6,10 +6,11 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AuthScreen } from './screens/AuthScreen';
 import { TripsListScreen } from './screens/TripsListScreen';
 import { TripDetailScreen } from './screens/TripDetailScreen';
+import { AccountScreen } from './screens/AccountScreen';
 
 const queryClient = new QueryClient();
 
-type Screen = 'trips' | { type: 'trip'; id: string };
+type Screen = 'trips' | 'account' | { type: 'trip'; id: string };
 
 function Navigator() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,7 +29,16 @@ function Navigator() {
   }
 
   if (screen === 'trips') {
-    return <TripsListScreen onSelectTrip={(id) => setScreen({ type: 'trip', id })} />;
+    return (
+      <TripsListScreen
+        onSelectTrip={(id) => setScreen({ type: 'trip', id })}
+        onOpenAccount={() => setScreen('account')}
+      />
+    );
+  }
+
+  if (screen === 'account') {
+    return <AccountScreen onBack={() => setScreen('trips')} />;
   }
 
   return <TripDetailScreen tripId={screen.id} onBack={() => setScreen('trips')} />;
