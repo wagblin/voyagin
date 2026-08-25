@@ -47,7 +47,7 @@ export function AuthPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
       <Card className="w-full max-w-sm">
-        <CardHeader>
+        <CardHeader className="text-center">
           <CardTitle>VoyagIn</CardTitle>
           <CardDescription>{isRegister ? 'Créer un compte' : 'Se connecter'}</CardDescription>
         </CardHeader>
@@ -84,12 +84,13 @@ export function AuthPage() {
               {isSubmitting ? (isRegister ? 'Inscription…' : 'Connexion…') : isRegister ? "S'inscrire" : 'Se connecter'}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            {isRegister ? 'Déjà un compte ? ' : 'Pas de compte ? '}
-            <button type="button" className="underline underline-offset-4" onClick={toggleMode}>
-              {isRegister ? 'Se connecter' : "S'inscrire"}
-            </button>
-          </p>
+          <button
+            type="button"
+            onClick={toggleMode}
+            className="mt-4 w-full text-center text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {isRegister ? 'Déjà un compte ? Se connecter' : "Pas de compte ? S'inscrire"}
+          </button>
         </CardContent>
       </Card>
     </main>
