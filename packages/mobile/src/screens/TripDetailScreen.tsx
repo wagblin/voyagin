@@ -27,6 +27,7 @@ import { extractDateTakenFromFileUri, extractGpsFromFileUri } from '../lib/exifF
 import { parseExifCoordinates, parseExifDateTaken } from '../lib/exifLocation';
 import { parseLatLngInput } from '../lib/coordinates';
 import { parseTakenAtInput } from '../lib/dateInput';
+import { parseTripDateRangeInput } from '../lib/tripDateRange';
 import { cloudinaryThumbnailUrl } from '../lib/cloudinary';
 import type { TripParticipant } from '../lib/tripsApi';
 import type { Photo } from '../lib/photosApi';
@@ -66,20 +67,26 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
   useEffect(() => {
     if (tripQuery.data) {
       setName(tripQuery.data.name);
-      setStartDate(tripQuery.data.dateRange?.start ?? '');
-      setEndDate(tripQuery.data.dateRange?.end ?? '');
+      setStartDate(tripQuery.data.dateRange ? tripQuery.data.dateRange.start.slice(0, 10) : '');
+      setEndDate(tripQuery.data.dateRange ? tripQuery.data.dateRange.end.slice(0, 10) : '');
     }
   }, [tripQuery.data]);
 
+  const dateRange = parseTripDateRangeInput(startDate, endDate);
+
   function handleSave() {
+    if (dateRange.kind === 'invalid') {
+      return;
+    }
+
     const trimmedName = name.trim();
     const input: { name?: string; startDate?: string; endDate?: string } = {};
     if (trimmedName !== '' && trimmedName !== tripQuery.data?.name) {
       input.name = trimmedName;
     }
-    if (startDate.trim() !== '' && endDate.trim() !== '') {
-      input.startDate = startDate.trim();
-      input.endDate = endDate.trim();
+    if (dateRange.kind === 'valid') {
+      input.startDate = dateRange.startDate;
+      input.endDate = dateRange.endDate;
     }
     if (Object.keys(input).length === 0) {
       return;
@@ -300,21 +307,21 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
           <Text style={styles.label}>Nom</Text>
           <TextInput style={styles.input} value={name} onChangeText={setName} testID="trip-name-input" />
 
-          <Text style={styles.label}>Date de début (ISO 8601)</Text>
+          <Text style={styles.label}>Date de début (AAAA-MM-JJ)</Text>
           <TextInput
             style={styles.input}
             value={startDate}
             onChangeText={setStartDate}
-            placeholder="2026-08-18T00:00:00.000Z"
+            placeholder="2026-08-18"
             testID="trip-start-date-input"
           />
 
-          <Text style={styles.label}>Date de fin (ISO 8601)</Text>
+          <Text style={styles.label}>Date de fin (AAAA-MM-JJ)</Text>
           <TextInput
             style={styles.input}
             value={endDate}
             onChangeText={setEndDate}
-            placeholder="2026-08-25T00:00:00.000Z"
+            placeholder="2026-08-25"
             testID="trip-end-date-input"
           />
 
@@ -323,7 +330,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
           <TouchableOpacity
             style={styles.saveButton}
             onPress={handleSave}
-            disabled={updateTripMutation.isPending}
+            disabled={updateTripMutation.isPending || dateRange.kind === 'invalid'}
             testID="save-trip-button"
           >
             <Text style={styles.saveButtonText}>{updateTripMutation.isPending ? '...' : 'Enregistrer'}</Text>

@@ -13,6 +13,11 @@ import {
   useTripQuery,
   useUpdateTripMutation,
 } from '@/hooks/useTrips'
+import { parseTripDateRangeInput } from '@/lib/tripDateRange'
+
+function toDateInputValue(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10)
+}
 
 export function TripDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -24,15 +29,32 @@ export function TripDetailPage() {
   const addParticipant = useAddParticipantMutation(id ?? '')
   const removeParticipant = useRemoveParticipantMutation(id ?? '')
   const [nameOverride, setNameOverride] = useState<string | undefined>(undefined)
+  const [startDateOverride, setStartDateOverride] = useState<string | undefined>(undefined)
+  const [endDateOverride, setEndDateOverride] = useState<string | undefined>(undefined)
   const [participantEmail, setParticipantEmail] = useState('')
   const name = nameOverride ?? tripQuery.data?.name ?? ''
+  const startDate =
+    startDateOverride ??
+    (tripQuery.data?.dateRange ? toDateInputValue(tripQuery.data.dateRange.start) : '')
+  const endDate =
+    endDateOverride ??
+    (tripQuery.data?.dateRange ? toDateInputValue(tripQuery.data.dateRange.end) : '')
 
   async function handleRename(event: FormEvent) {
     event.preventDefault()
     if (!name.trim()) {
       return
     }
-    await updateTrip.mutateAsync({ name })
+    const dateRange = parseTripDateRangeInput(startDate, endDate)
+    if (dateRange.kind === 'invalid') {
+      return
+    }
+    await updateTrip.mutateAsync({
+      name,
+      ...(dateRange.kind === 'valid'
+        ? { startDate: dateRange.startDate, endDate: dateRange.endDate }
+        : {}),
+    })
   }
 
   async function handleDelete() {
@@ -99,6 +121,26 @@ export function TripDetailPage() {
               <Button type="submit" disabled={updateTrip.isPending}>
                 Enregistrer
               </Button>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex flex-1 flex-col gap-1">
+                <Label htmlFor="trip-start-date">Date de début</Label>
+                <Input
+                  id="trip-start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDateOverride(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-1">
+                <Label htmlFor="trip-end-date">Date de fin</Label>
+                <Input
+                  id="trip-end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDateOverride(event.target.value)}
+                />
+              </div>
             </div>
             {updateTrip.isError && (
               <p className="text-sm text-destructive">{updateTrip.error.message}</p>

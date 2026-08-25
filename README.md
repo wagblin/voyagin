@@ -95,7 +95,7 @@ L'API et le web tournent en permanence dans le cloud (pas besoin d'une machine a
 
 Hébergement : Railway (API + Postgres + console DB), Vercel (web). Les deux se redéploient automatiquement à chaque push sur `main`.
 
-**Mobile** : pas de déploiement cloud (pas d'EAS) — mais des builds natifs locaux réels installables sur iPhone/iPad/Android via Xcode/Android Studio (`npx expo run:ios --device "<nom>" --configuration Release` / `npx expo run:android`), en plus du mode Expo Go pour l'itération rapide (`pnpm dev:lan`). Voir `CLAUDE.md` (section Déploiement) pour la procédure détaillée et les pièges connus (signature Apple, clé Google Maps, NDK Android).
+**Mobile** : pas de déploiement cloud (pas d'EAS) — mais des builds natifs locaux réels installables sur iPhone/iPad et sur un vrai Android (Pixel 10a) via Xcode/Android Studio (`npx expo run:ios --device "<nom>" --configuration Release` / `npx expo run:android --device Pixel_10a --variant release`), en plus du mode Expo Go pour l'itération rapide (`pnpm dev:lan`). Voir `CLAUDE.md` (section Déploiement) pour la procédure détaillée et les pièges connus (signature Apple, clé Google Maps, NDK Android).
 
 **Console DB (Adminer)** : exposée publiquement mais protégée par les identifiants Postgres eux-mêmes (Adminer n'a pas de session sans les fournir à chaque connexion — même niveau de protection qu'un accès `psql` direct). Les identifiants sont dans Railway (`railway variables --service Postgres`), jamais commités.
 
