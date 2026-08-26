@@ -8,6 +8,7 @@ import { parseLatLngInput } from '@/lib/coordinates'
 import { parseTakenAtInput } from '@/lib/dateInput'
 import { extractDateTakenFromFile, extractGpsFromFile } from '@/lib/exifLocation'
 import { cloudinaryThumbnailUrl } from '@/lib/cloudinary'
+import { isAndroid } from '@/lib/platform'
 import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from '@/hooks/useTripPhotos'
 
 function formatAsTakenAtInput(date: Date): string {
@@ -205,7 +206,12 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
             <Input
               id="photo-file"
               type="file"
-              accept="image/*"
+              // Android's Chrome restricts accept="image/*" to the Photo Picker UI, which
+              // strips GPS EXIF data from the returned file. Omitting `accept` on Android
+              // falls back to the general Storage Access Framework file browser instead,
+              // which preserves the original file bytes/EXIF (mirrors mobile's
+              // DocumentPicker-based "Importer un fichier"). Left untouched everywhere else.
+              accept={isAndroid() ? undefined : 'image/*'}
               ref={fileInputRef}
               onChange={(event) => void handleFileChange(event)}
             />
