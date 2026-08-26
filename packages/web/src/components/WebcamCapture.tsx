@@ -21,16 +21,19 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     return () => stopStream()
   }, [])
 
+  useEffect(() => {
+    if (isStreaming && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current
+      void videoRef.current.play()
+    }
+  }, [isStreaming])
+
   async function handleStart() {
     setCaptureError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true })
       streamRef.current = stream
       setIsStreaming(true)
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
     } catch (err) {
       setCaptureError(err instanceof Error ? err.message : 'Impossible d\'accéder à la caméra.')
     }
