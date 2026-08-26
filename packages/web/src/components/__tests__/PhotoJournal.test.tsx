@@ -34,6 +34,30 @@ function stubGeolocationSuccess(latitude: number, longitude: number) {
   return getCurrentPosition
 }
 
+function stubGeolocationError(code: number) {
+  const getCurrentPosition = vi.fn((_success: PositionCallback, error: PositionErrorCallback) => {
+    error({ code, message: 'irrelevant native message' } as GeolocationPositionError)
+  })
+  vi.stubGlobal('navigator', {
+    ...navigator,
+    geolocation: { getCurrentPosition },
+  })
+  return getCurrentPosition
+}
+
+async function renderWithFileSelected() {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve([]) }))
+  vi.mocked(gps).mockResolvedValue(undefined)
+  vi.mocked(parse).mockResolvedValue({})
+
+  renderPhotoJournal()
+
+  const fileInput = await screen.findByLabelText('Photo')
+  fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
+  return screen.findByRole('button', { name: 'Ma position' })
+}
+
 describe('PhotoJournal', () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -219,13 +243,45 @@ describe('PhotoJournal', () => {
     fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
 
     await waitFor(() => {
-      expect(getCurrentPosition).toHaveBeenCalled()
       expect(screen.getByLabelText('Latitude')).toHaveValue('48.8566')
       expect(screen.getByLabelText('Longitude')).toHaveValue('2.3522')
       expect((screen.getByLabelText('Date de prise') as HTMLInputElement).value).toMatch(
         /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
       )
     })
+
+    // Exactly one call: the position must come from the promise kicked off on the click
+    // (pendingPositionRef), not from a fresh call made from inside handleFileChange — a
+    // regression that would request geolocation a second time instead of awaiting the
+    // pre-fetched one.
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a permission-specific message when geolocation is refused by the user', async () => {
+    const useMyLocationButton = await renderWithFileSelected()
+    stubGeolocationError(1)
+
+    fireEvent.click(useMyLocationButton)
+
+    await screen.findByText('Localisation refusée — vérifie les autorisations de site dans ton navigateur.')
+  })
+
+  it('shows an unavailable-position message when the device cannot determine its position', async () => {
+    const useMyLocationButton = await renderWithFileSelected()
+    stubGeolocationError(2)
+
+    fireEvent.click(useMyLocationButton)
+
+    await screen.findByText('Position indisponible pour le moment.')
+  })
+
+  it('shows a timeout message when the geolocation request takes too long', async () => {
+    const useMyLocationButton = await renderWithFileSelected()
+    stubGeolocationError(3)
+
+    fireEvent.click(useMyLocationButton)
+
+    await screen.findByText('La récupération de la position a pris trop de temps.')
   })
 
   it('does not fall back to the live browser position when the selected file has EXIF GPS metadata', async () => {

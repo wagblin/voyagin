@@ -74,6 +74,24 @@ describe('photosApi', () => {
       expect(appendSpy).toHaveBeenCalledWith('caption', 'Tour Eiffel');
     });
 
+    it('uses the provided fileName and mimeType instead of the JPEG fallbacks', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(samplePhoto) });
+      global.fetch = fetchMock as unknown as typeof fetch;
+      const appendSpy = spyOnFormDataAppend();
+
+      await addPhoto('trip-1', {
+        uri: 'file:///tmp/photo.heic',
+        fileName: 'IMG_1234.heic',
+        mimeType: 'image/heic',
+      });
+
+      expect(appendSpy).toHaveBeenCalledWith('image', {
+        uri: 'file:///tmp/photo.heic',
+        name: 'IMG_1234.heic',
+        type: 'image/heic',
+      });
+    });
+
     it('omits optional fields when not provided', async () => {
       const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(samplePhoto) });
       global.fetch = fetchMock as unknown as typeof fetch;
