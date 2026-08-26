@@ -75,7 +75,7 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
     <div className="flex flex-col gap-2">
       {!isStreaming && (
         <Button type="button" variant="outline" onClick={() => void handleStart()}>
-          Prendre une photo
+          Prendre un selfie
         </Button>
       )}
       {captureError && <p className="text-sm text-destructive">{captureError}</p>}
