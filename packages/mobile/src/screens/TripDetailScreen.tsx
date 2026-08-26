@@ -172,7 +172,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     setPhotoTakenAt(null);
   }
 
-  async function handleCapturePhoto() {
+  async function captureFromCamera(cameraType: ImagePicker.CameraType) {
     setCaptureError(null);
 
     const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
@@ -187,7 +187,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7, cameraType });
     if (result.canceled || result.assets.length === 0) {
       return;
     }
@@ -209,6 +209,14 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     setPhotoLongitude(longitude);
     setPhotoCaption('');
     setPhotoTakenAt(new Date());
+  }
+
+  async function handleCapturePhoto() {
+    await captureFromCamera(ImagePicker.CameraType.back);
+  }
+
+  async function handleCaptureSelfie() {
+    await captureFromCamera(ImagePicker.CameraType.front);
   }
 
   async function handlePickPhoto() {
@@ -486,6 +494,14 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
                 testID="capture-photo-button"
               >
                 <Text style={styles.saveButtonText}>Prendre une photo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveButton, styles.photoActionButton]}
+                onPress={() => void handleCaptureSelfie()}
+                testID="capture-selfie-button"
+              >
+                <Text style={styles.saveButtonText}>Prendre un selfie</Text>
               </TouchableOpacity>
 
               {Platform.OS === 'ios' && (
