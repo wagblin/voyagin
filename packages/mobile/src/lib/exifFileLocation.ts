@@ -66,10 +66,20 @@ export async function extractGpsFromFileUri(uri: string): Promise<ExifCoordinate
       return null;
     }
 
-    return {
-      latitude: piexif.GPSHelper.dmsRationalToDeg(latitude, latitudeRef),
-      longitude: piexif.GPSHelper.dmsRationalToDeg(longitude, longitudeRef),
-    };
+    const parsedLatitude = piexif.GPSHelper.dmsRationalToDeg(latitude, latitudeRef);
+    const parsedLongitude = piexif.GPSHelper.dmsRationalToDeg(longitude, longitudeRef);
+    if (!Number.isFinite(parsedLatitude) || !Number.isFinite(parsedLongitude)) {
+      return null;
+    }
+    // Many Android camera/gallery apps write a placeholder GPS tag (0/1,0/1,0/1, empty Ref) to mean
+    // "no real GPS data was available", instead of omitting the GPS IFD entirely. This converts to
+    // the finite number 0, so it passes the check above — but (0, 0) is Null Island, never a real
+    // location for this app, so it's treated the same as the NaN case: no GPS data.
+    if (parsedLatitude === 0 && parsedLongitude === 0) {
+      return null;
+    }
+
+    return { latitude: parsedLatitude, longitude: parsedLongitude };
   } catch {
     return null;
   }

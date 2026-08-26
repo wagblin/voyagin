@@ -59,6 +59,14 @@ describe('parseExifCoordinates', () => {
   it('returns null when a GPS value is not a usable number', () => {
     expect(parseExifCoordinates({ GPSLatitude: 'unknown', GPSLongitude: 2.3522 })).toBeNull();
   });
+
+  it('returns null when a GPS value is NaN', () => {
+    expect(parseExifCoordinates({ GPSLatitude: NaN, GPSLongitude: 2.3522 })).toBeNull();
+  });
+
+  it('returns null when the GPS tags carry the Android placeholder sentinel (0, 0)', () => {
+    expect(parseExifCoordinates({ GPSLatitude: 0, GPSLongitude: 0 })).toBeNull();
+  });
 });
 
 describe('parseExifDateTaken', () => {

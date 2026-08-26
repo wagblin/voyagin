@@ -40,10 +40,17 @@ export function parseExifCoordinates(exif: Record<string, unknown> | null | unde
     return null;
   }
 
-  return {
-    latitude: applyHemisphereSign(rawLatitude, exif.GPSLatitudeRef),
-    longitude: applyHemisphereSign(rawLongitude, exif.GPSLongitudeRef),
-  };
+  const latitude = applyHemisphereSign(rawLatitude, exif.GPSLatitudeRef);
+  const longitude = applyHemisphereSign(rawLongitude, exif.GPSLongitudeRef);
+
+  // Many Android camera/gallery apps write a placeholder GPS tag (0, 0) to mean "no real GPS data
+  // was available", instead of omitting the GPS tags entirely. (0, 0) is Null Island, never a real
+  // location for this app, so it's treated the same as missing GPS data.
+  if (latitude === 0 && longitude === 0) {
+    return null;
+  }
+
+  return { latitude, longitude };
 }
 
 const EXIF_DATE_TIME_PATTERN = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}:\d{2}:\d{2})$/;

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import * as MediaLibrary from 'expo-media-library';
 import { useAuth } from '../hooks/useAuth';
 import {
   useAddParticipantMutation,
@@ -26,7 +28,8 @@ import { useAddPhotoMutation, useDeletePhotoMutation, useTripPhotosQuery } from 
 import { PhotoMap } from '../components/PhotoMap';
 import { extractDateTakenFromFileUri, extractGpsFromFileUri } from '../lib/exifFileLocation';
 import { parseExifCoordinates, parseExifDateTaken } from '../lib/exifLocation';
-import { parseLatLngInput } from '../lib/coordinates';
+import { parseLatLngInput, type LatLng } from '../lib/coordinates';
+import { pickBestLocation } from '../lib/pickBestLocation';
 import { toUtcDateOnlyIso } from '../lib/dateOnlyIso';
 import { isValidTripDateRange } from '../lib/tripDateRangeValidity';
 import { cloudinaryThumbnailUrl } from '../lib/cloudinary';
@@ -217,13 +220,32 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, exif: true });
+    // Best-effort: this second, MediaLibrary-specific permission request's side effect on Android
+    // is enabling ACCESS_MEDIA_LOCATION, which `getAssetInfoAsync` below needs to return real GPS
+    // data. Never blocks the picker flow if denied — the file-read and EXIF-field fallbacks below
+    // still apply.
+    const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
+
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 1, exif: true });
     if (result.canceled || result.assets.length === 0) {
       return;
     }
 
     const asset = result.assets[0]!;
-    const coordinates = parseExifCoordinates(asset.exif ?? null);
+
+    let mediaLibraryLocation: LatLng | null = null;
+    if (asset.assetId && mediaLibraryPermission.granted) {
+      try {
+        const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.assetId);
+        mediaLibraryLocation = assetInfo.location ?? null;
+      } catch {
+        mediaLibraryLocation = null;
+      }
+    }
+
+    const fileLocation = await extractGpsFromFileUri(asset.uri);
+    const exifLocation = parseExifCoordinates(asset.exif ?? null);
+    const coordinates = pickBestLocation(mediaLibraryLocation, pickBestLocation(fileLocation, exifLocation));
     const dateTaken = parseExifDateTaken(asset.exif ?? null);
 
     setPendingPhoto({ uri: asset.uri, ...pendingPhotoFileFields(asset.fileName, asset.mimeType) });
@@ -466,13 +488,15 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
                 <Text style={styles.saveButtonText}>Prendre une photo</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.saveButton, styles.photoActionButton]}
-                onPress={() => void handlePickPhoto()}
-                testID="pick-photo-button"
-              >
-                <Text style={styles.saveButtonText}>Choisir depuis la bibliothèque</Text>
-              </TouchableOpacity>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[styles.saveButton, styles.photoActionButton]}
+                  onPress={() => void handlePickPhoto()}
+                  testID="pick-photo-button"
+                >
+                  <Text style={styles.saveButtonText}>Choisir depuis la bibliothèque</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[styles.saveButton, styles.photoActionButton]}

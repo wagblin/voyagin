@@ -33,6 +33,28 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
   })
 }
 
+function isGeolocationPositionError(
+  err: unknown,
+): err is { code: number; message: string } {
+  return typeof err === 'object' && err !== null && 'code' in err && 'message' in err
+}
+
+function describeGeolocationError(err: unknown): string {
+  if (isGeolocationPositionError(err)) {
+    switch (err.code) {
+      case 1:
+        return 'Localisation refusée — vérifie les autorisations de site dans ton navigateur.'
+      case 2:
+        return 'Position indisponible pour le moment.'
+      case 3:
+        return 'La récupération de la position a pris trop de temps.'
+      default:
+        return 'Impossible de récupérer la position.'
+    }
+  }
+  return err instanceof Error ? err.message : 'Impossible de récupérer la position.'
+}
+
 interface PhotoJournalProps {
   tripId: string
   currentUserId: string | undefined
@@ -70,7 +92,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
       setLatitude(String(position.coords.latitude))
       setLongitude(String(position.coords.longitude))
     } catch (err) {
-      setLocationError(err instanceof Error ? err.message : 'Impossible de récupérer la position.')
+      setLocationError(describeGeolocationError(err))
     } finally {
       setIsLocating(false)
     }

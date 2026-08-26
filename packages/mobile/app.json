@@ -42,6 +42,14 @@
           "locationAlwaysAndWhenInUsePermission": "VoyagIn a besoin de votre position pour géolocaliser les photos de votre carnet de voyage."
         }
       ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "VoyagIn a besoin d'accéder à vos photos pour les ajouter à votre carnet de voyage.",
+          "savePhotosPermission": "VoyagIn a besoin d'enregistrer des photos dans votre bibliothèque.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
       "@react-native-community/datetimepicker"
     ]
   }

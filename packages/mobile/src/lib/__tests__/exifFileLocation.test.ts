@@ -98,6 +98,36 @@ describe('extractGpsFromFileUri', () => {
     });
   });
 
+  it('returns null instead of NaN coordinates when the GPS tags are present but malformed', async () => {
+    jest.mocked(FileSystem.readAsStringAsync).mockResolvedValue(FAKE_FILE_BASE64);
+    jest.mocked(piexif.GPSHelper.dmsRationalToDeg).mockReturnValue(NaN);
+    jest.mocked(piexif.load).mockReturnValue({
+      GPS: {
+        [piexif.GPSIFD.GPSLatitude]: GPS_LATITUDE_DMS,
+        [piexif.GPSIFD.GPSLatitudeRef]: 'N',
+        [piexif.GPSIFD.GPSLongitude]: GPS_LONGITUDE_DMS,
+        [piexif.GPSIFD.GPSLongitudeRef]: 'E',
+      },
+    });
+
+    await expect(extractGpsFromFileUri('file:///tmp/imported.jpg')).resolves.toBeNull();
+  });
+
+  it('returns null instead of (0, 0) when the GPS tags carry the Android placeholder sentinel', async () => {
+    jest.mocked(FileSystem.readAsStringAsync).mockResolvedValue(FAKE_FILE_BASE64);
+    jest.mocked(piexif.GPSHelper.dmsRationalToDeg).mockReturnValue(0);
+    jest.mocked(piexif.load).mockReturnValue({
+      GPS: {
+        [piexif.GPSIFD.GPSLatitude]: [[0, 1], [0, 1], [0, 1]],
+        [piexif.GPSIFD.GPSLatitudeRef]: '',
+        [piexif.GPSIFD.GPSLongitude]: [[0, 1], [0, 1], [0, 1]],
+        [piexif.GPSIFD.GPSLongitudeRef]: '',
+      },
+    });
+
+    await expect(extractGpsFromFileUri('file:///tmp/imported.jpg')).resolves.toBeNull();
+  });
+
   it('returns null when the file has no GPS metadata', async () => {
     jest.mocked(FileSystem.readAsStringAsync).mockResolvedValue(FAKE_FILE_BASE64);
     jest.mocked(piexif.load).mockReturnValue({});
