@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,7 +25,11 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
       reject(new Error('La géolocalisation n\'est pas disponible sur ce navigateur.'))
       return
     }
-    navigator.geolocation.getCurrentPosition(resolve, reject)
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000,
+    })
   })
 }
 
@@ -47,6 +51,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
   const [caption, setCaption] = useState('')
   const [locationError, setLocationError] = useState<string | null>(null)
   const [isLocating, setIsLocating] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
 
@@ -127,6 +132,17 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
     setCaption('')
   }
 
+  function handleCancelPhoto() {
+    setFile(null)
+    setLatitude('')
+    setLongitude('')
+    setTakenAt('')
+    setCaption('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   async function handleDelete(photoId: string) {
     if (!window.confirm('Supprimer cette photo ?')) {
       return
@@ -149,10 +165,16 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
             id="photo-file"
             type="file"
             accept="image/*"
+            ref={fileInputRef}
             onChange={(event) => void handleFileChange(event)}
           />
           {previewUrl && (
-            <img src={previewUrl} alt="Aperçu" className="aspect-square w-40 rounded-lg object-cover" />
+            <>
+              <img src={previewUrl} alt="Aperçu" className="aspect-square w-40 rounded-lg object-cover" />
+              <Button type="button" variant="outline" onClick={handleCancelPhoto}>
+                Annuler
+              </Button>
+            </>
           )}
           <WebcamCapture onCapture={handleWebcamCapture} />
         </div>

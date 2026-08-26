@@ -35,6 +35,29 @@ import type { Photo } from '../lib/photosApi';
 
 interface PendingPhoto {
   uri: string;
+  fileName?: string;
+  mimeType?: string;
+}
+
+function pendingPhotoFileFields(
+  fileName: string | null | undefined,
+  mimeType: string | undefined,
+): Pick<PendingPhoto, 'fileName' | 'mimeType'> {
+  return {
+    ...(fileName ? { fileName } : {}),
+    ...(mimeType ? { mimeType } : {}),
+  };
+}
+
+const LOCATION_TIMEOUT_MS = 10000;
+
+async function getCurrentPositionWithTimeout(): Promise<Location.LocationObject> {
+  return Promise.race([
+    Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+    new Promise<never>((_resolve, reject) => {
+      setTimeout(() => reject(new Error('Délai dépassé pour obtenir la position.')), LOCATION_TIMEOUT_MS);
+    }),
+  ]);
 }
 
 export interface TripDetailScreenProps {
@@ -166,11 +189,21 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
       return;
     }
 
-    const position = await Location.getCurrentPositionAsync({});
+    const asset = result.assets[0]!;
 
-    setPendingPhoto({ uri: result.assets[0]!.uri });
-    setPhotoLatitude(String(position.coords.latitude));
-    setPhotoLongitude(String(position.coords.longitude));
+    let latitude = '';
+    let longitude = '';
+    try {
+      const position = await getCurrentPositionWithTimeout();
+      latitude = String(position.coords.latitude);
+      longitude = String(position.coords.longitude);
+    } catch (err) {
+      setCaptureError(err instanceof Error ? err.message : 'Position indisponible.');
+    }
+
+    setPendingPhoto({ uri: asset.uri, ...pendingPhotoFileFields(asset.fileName, asset.mimeType) });
+    setPhotoLatitude(latitude);
+    setPhotoLongitude(longitude);
     setPhotoCaption('');
     setPhotoTakenAt(new Date());
   }
@@ -193,7 +226,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     const coordinates = parseExifCoordinates(asset.exif ?? null);
     const dateTaken = parseExifDateTaken(asset.exif ?? null);
 
-    setPendingPhoto({ uri: asset.uri });
+    setPendingPhoto({ uri: asset.uri, ...pendingPhotoFileFields(asset.fileName, asset.mimeType) });
     setPhotoLatitude(coordinates ? String(coordinates.latitude) : '');
     setPhotoLongitude(coordinates ? String(coordinates.longitude) : '');
     setPhotoCaption('');
@@ -212,7 +245,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     const coordinates = await extractGpsFromFileUri(asset.uri);
     const dateTaken = await extractDateTakenFromFileUri(asset.uri);
 
-    setPendingPhoto({ uri: asset.uri });
+    setPendingPhoto({ uri: asset.uri, ...pendingPhotoFileFields(asset.name, asset.mimeType) });
     setPhotoLatitude(coordinates ? String(coordinates.latitude) : '');
     setPhotoLongitude(coordinates ? String(coordinates.longitude) : '');
     setPhotoCaption('');
@@ -230,9 +263,11 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
 
     setIsLocating(true);
     try {
-      const position = await Location.getCurrentPositionAsync({});
+      const position = await getCurrentPositionWithTimeout();
       setPhotoLatitude(String(position.coords.latitude));
       setPhotoLongitude(String(position.coords.longitude));
+    } catch (err) {
+      setCaptureError(err instanceof Error ? err.message : 'Position indisponible.');
     } finally {
       setIsLocating(false);
     }
@@ -253,6 +288,7 @@ export function TripDetailScreen({ tripId, onBack }: TripDetailScreenProps) {
     addPhotoMutation.mutate(
       {
         uri: pendingPhoto.uri,
+        ...pendingPhotoFileFields(pendingPhoto.fileName, pendingPhoto.mimeType),
         ...(coordinates.kind === 'valid'
           ? { latitude: coordinates.latitude, longitude: coordinates.longitude }
           : {}),
