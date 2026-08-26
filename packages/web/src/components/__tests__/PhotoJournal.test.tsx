@@ -23,6 +23,17 @@ function samplePhotoFile() {
   return new File(['fake-bytes'], 'photo.jpg', { type: 'image/jpeg' })
 }
 
+function stubGeolocationSuccess(latitude: number, longitude: number) {
+  const getCurrentPosition = vi.fn((success: PositionCallback) => {
+    success({ coords: { latitude, longitude } } as GeolocationPosition)
+  })
+  vi.stubGlobal('navigator', {
+    ...navigator,
+    geolocation: { getCurrentPosition },
+  })
+  return getCurrentPosition
+}
+
 describe('PhotoJournal', () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -100,11 +111,16 @@ describe('PhotoJournal', () => {
   it('disables the submit button when only one of latitude/longitude is filled in manually', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve([]) }))
     vi.mocked(gps).mockResolvedValue(undefined)
+    vi.mocked(parse).mockResolvedValue({})
 
     renderPhotoJournal()
 
     const fileInput = await screen.findByLabelText('Photo')
     fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
+    await waitFor(() => {
+      expect(parse).toHaveBeenCalled()
+    })
 
     const latitudeInput = screen.getByLabelText('Latitude')
     fireEvent.change(latitudeInput, { target: { value: '48.8566' } })
@@ -185,5 +201,45 @@ describe('PhotoJournal', () => {
         expect.objectContaining({ method: 'POST' }),
       )
     })
+  })
+
+  it('falls back to the live browser position and the current date when the selected file has no EXIF GPS/date metadata (e.g. a fresh camera capture on iOS Safari)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve([]) }))
+    vi.mocked(gps).mockResolvedValue(undefined)
+    vi.mocked(parse).mockResolvedValue({})
+    const getCurrentPosition = stubGeolocationSuccess(48.8566, 2.3522)
+
+    renderPhotoJournal()
+
+    const fileInput = await screen.findByLabelText('Photo')
+    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
+    await waitFor(() => {
+      expect(getCurrentPosition).toHaveBeenCalled()
+      expect(screen.getByLabelText('Latitude')).toHaveValue('48.8566')
+      expect(screen.getByLabelText('Longitude')).toHaveValue('2.3522')
+      expect((screen.getByLabelText('Date de prise') as HTMLInputElement).value).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+      )
+    })
+  })
+
+  it('does not fall back to the live browser position when the selected file has EXIF GPS metadata', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve([]) }))
+    vi.mocked(gps).mockResolvedValue({ latitude: 48.8566, longitude: 2.3522 })
+    vi.mocked(parse).mockResolvedValue({ DateTimeOriginal: new Date('2024-03-15T14:23:00') })
+    const getCurrentPosition = stubGeolocationSuccess(0, 0)
+
+    renderPhotoJournal()
+
+    const fileInput = await screen.findByLabelText('Photo')
+    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Latitude')).toHaveValue('48.8566')
+      expect(screen.getByLabelText('Longitude')).toHaveValue('2.3522')
+    })
+
+    expect(getCurrentPosition).not.toHaveBeenCalled()
   })
 })

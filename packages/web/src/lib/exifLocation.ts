@@ -8,7 +8,20 @@ export interface ExifGpsLocation {
 export async function extractGpsFromFile(file: File): Promise<ExifGpsLocation | null> {
   try {
     const coordinates = await gps(file)
-    return coordinates ?? null
+    if (!coordinates) {
+      return null
+    }
+    if (!Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)) {
+      return null
+    }
+    // Many Android camera/gallery apps write a placeholder GPS tag (0, 0) to mean "no real GPS
+    // data was available", instead of omitting the GPS metadata entirely. (0, 0) is Null Island,
+    // never a real location for this app, so it's treated the same as the NaN case: no GPS data.
+    // Mirrors the equivalent guard in packages/mobile/src/lib/exifFileLocation.ts.
+    if (coordinates.latitude === 0 && coordinates.longitude === 0) {
+      return null
+    }
+    return coordinates
   } catch {
     return null
   }

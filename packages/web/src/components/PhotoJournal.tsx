@@ -118,11 +118,29 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
     if (coordinates && latitude.trim() === '' && longitude.trim() === '') {
       setLatitude(String(coordinates.latitude))
       setLongitude(String(coordinates.longitude))
+    } else if (!coordinates && latitude.trim() === '' && longitude.trim() === '') {
+      // Best-effort fallback for a freshly-captured photo (e.g. iOS Safari's "Prendre une
+      // photo" file-input option), which typically has no EXIF GPS to extract — silently try
+      // the browser's live position instead, matching mobile's camera-capture behavior. Never
+      // surfaces an error here (unlike the explicit "Ma position" button): if it fails, the
+      // fields just stay empty, exactly as they already do today.
+      try {
+        const position = await getCurrentPosition()
+        setLatitude(String(position.coords.latitude))
+        setLongitude(String(position.coords.longitude))
+      } catch {
+        // best-effort only, ignore
+      }
     }
 
     const dateTaken = await extractDateTakenFromFile(selectedFile)
     if (dateTaken && takenAt.trim() === '') {
       setTakenAt(dateTaken)
+    } else if (!dateTaken && takenAt.trim() === '') {
+      // Same reasoning as above: a freshly-captured photo has no EXIF DateTimeOriginal to
+      // extract, so default to "now" (matching mobile's camera-capture behavior) instead of
+      // leaving the field empty.
+      setTakenAt(formatAsTakenAtInput(new Date()))
     }
   }
 

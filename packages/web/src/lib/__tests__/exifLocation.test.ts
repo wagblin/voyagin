@@ -25,6 +25,20 @@ describe('extractGpsFromFile', () => {
 
     await expect(extractGpsFromFile(file)).resolves.toBeNull()
   })
+
+  it('returns null when the coordinates are NaN', async () => {
+    vi.mocked(gps).mockResolvedValue({ latitude: NaN, longitude: NaN })
+    const file = new File(['fake-bytes'], 'photo.jpg', { type: 'image/jpeg' })
+
+    await expect(extractGpsFromFile(file)).resolves.toBeNull()
+  })
+
+  it('returns null when the coordinates are the (0, 0) Android placeholder sentinel', async () => {
+    vi.mocked(gps).mockResolvedValue({ latitude: 0, longitude: 0 })
+    const file = new File(['fake-bytes'], 'photo.jpg', { type: 'image/jpeg' })
+
+    await expect(extractGpsFromFile(file)).resolves.toBeNull()
+  })
 })
 
 describe('extractDateTakenFromFile', () => {
