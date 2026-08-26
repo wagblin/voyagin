@@ -58,13 +58,13 @@ describe('PhotoJournal', () => {
 
     renderPhotoJournal()
 
+    const fileInput = await screen.findByLabelText('Photo')
+    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
     const latitudeInput = await screen.findByLabelText('Latitude')
     const longitudeInput = await screen.findByLabelText('Longitude')
     fireEvent.change(latitudeInput, { target: { value: '10' } })
     fireEvent.change(longitudeInput, { target: { value: '20' } })
-
-    const fileInput = screen.getByLabelText('Photo')
-    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
 
     await waitFor(() => {
       expect(gps).toHaveBeenCalled()
@@ -118,6 +118,9 @@ describe('PhotoJournal', () => {
 
     renderPhotoJournal()
 
+    const fileInput = await screen.findByLabelText('Photo')
+    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
     const dateTakenInput = await screen.findByLabelText('Date de prise')
     expect(dateTakenInput).toHaveAttribute('type', 'datetime-local')
   })
@@ -144,11 +147,11 @@ describe('PhotoJournal', () => {
 
     renderPhotoJournal()
 
+    const fileInput = await screen.findByLabelText('Photo')
+    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
+
     const dateTakenInput = await screen.findByLabelText('Date de prise')
     fireEvent.change(dateTakenInput, { target: { value: '2020-01-01T00:00' } })
-
-    const fileInput = screen.getByLabelText('Photo')
-    fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
 
     await waitFor(() => {
       expect(parse).toHaveBeenCalled()

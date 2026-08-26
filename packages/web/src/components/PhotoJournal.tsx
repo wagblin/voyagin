@@ -181,82 +181,85 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
       <TripMap photos={photos} />
 
       <form className="flex flex-col gap-3" onSubmit={(event) => void handleSubmit(event)}>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="photo-file">Photo</Label>
-          <Input
-            id="photo-file"
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={(event) => void handleFileChange(event)}
-          />
-          {previewUrl && (
-            <>
+        {file === null ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="photo-file">Photo</Label>
+            <Input
+              id="photo-file"
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={(event) => void handleFileChange(event)}
+            />
+            <WebcamCapture onCapture={handleWebcamCapture} />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {previewUrl && (
               <img src={previewUrl} alt="Aperçu" className="aspect-square w-40 rounded-lg object-cover" />
-              <Button type="button" variant="outline" onClick={handleCancelPhoto}>
-                Annuler
+            )}
+
+            <div className="flex items-end gap-2">
+              <div className="flex flex-1 flex-col gap-2">
+                <Label htmlFor="photo-latitude">Latitude</Label>
+                <Input
+                  id="photo-latitude"
+                  inputMode="decimal"
+                  value={latitude}
+                  onChange={(event) => setLatitude(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-2">
+                <Label htmlFor="photo-longitude">Longitude</Label>
+                <Input
+                  id="photo-longitude"
+                  inputMode="decimal"
+                  value={longitude}
+                  onChange={(event) => setLongitude(event.target.value)}
+                />
+              </div>
+              <Button type="button" onClick={() => void handleUseMyLocation()} disabled={isLocating}>
+                {isLocating ? '…' : 'Ma position'}
               </Button>
-            </>
-          )}
-          <WebcamCapture onCapture={handleWebcamCapture} />
-        </div>
+            </div>
+            {locationError && <p className="text-sm text-destructive">{locationError}</p>}
 
-        <div className="flex items-end gap-2">
-          <div className="flex flex-1 flex-col gap-2">
-            <Label htmlFor="photo-latitude">Latitude</Label>
-            <Input
-              id="photo-latitude"
-              inputMode="decimal"
-              value={latitude}
-              onChange={(event) => setLatitude(event.target.value)}
-            />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="photo-caption">Légende (optionnel)</Label>
+              <Input
+                id="photo-caption"
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="photo-taken-at">Date de prise</Label>
+              <Input
+                id="photo-taken-at"
+                type="datetime-local"
+                value={takenAt}
+                onChange={(event) => setTakenAt(event.target.value)}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={
+                addPhoto.isPending ||
+                parseLatLngInput(latitude, longitude).kind === 'invalid' ||
+                parseTakenAtInput(takenAt).kind === 'invalid'
+              }
+            >
+              {addPhoto.isPending ? 'Envoi…' : 'Ajouter la photo'}
+            </Button>
+            {addPhoto.isError && <p className="text-sm text-destructive">{addPhoto.error.message}</p>}
+
+            <Button type="button" variant="outline" onClick={handleCancelPhoto}>
+              Annuler
+            </Button>
           </div>
-          <div className="flex flex-1 flex-col gap-2">
-            <Label htmlFor="photo-longitude">Longitude</Label>
-            <Input
-              id="photo-longitude"
-              inputMode="decimal"
-              value={longitude}
-              onChange={(event) => setLongitude(event.target.value)}
-            />
-          </div>
-          <Button type="button" onClick={() => void handleUseMyLocation()} disabled={isLocating}>
-            {isLocating ? '…' : 'Ma position'}
-          </Button>
-        </div>
-        {locationError && <p className="text-sm text-destructive">{locationError}</p>}
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="photo-caption">Légende (optionnel)</Label>
-          <Input
-            id="photo-caption"
-            value={caption}
-            onChange={(event) => setCaption(event.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="photo-taken-at">Date de prise</Label>
-          <Input
-            id="photo-taken-at"
-            type="datetime-local"
-            value={takenAt}
-            onChange={(event) => setTakenAt(event.target.value)}
-          />
-        </div>
-
-        <Button
-          type="submit"
-          disabled={
-            addPhoto.isPending ||
-            !file ||
-            parseLatLngInput(latitude, longitude).kind === 'invalid' ||
-            parseTakenAtInput(takenAt).kind === 'invalid'
-          }
-        >
-          {addPhoto.isPending ? 'Envoi…' : 'Ajouter la photo'}
-        </Button>
-        {addPhoto.isError && <p className="text-sm text-destructive">{addPhoto.error.message}</p>}
+        )}
       </form>
 
       {photosQuery.isPending && <p className="text-sm text-muted-foreground">Chargement des photos…</p>}
