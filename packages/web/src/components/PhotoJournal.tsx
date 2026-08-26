@@ -75,6 +75,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
   const [locationError, setLocationError] = useState<string | null>(null)
   const [isLocating, setIsLocating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingPositionRef = useRef<Promise<GeolocationPosition | null> | null>(null)
 
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
 
@@ -97,6 +98,15 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
     } finally {
       setIsLocating(false)
     }
+  }
+
+  function handlePhotoInputInteraction() {
+    // Kicked off from a direct user gesture (click on the file input, before the native
+    // camera/photo-picker UI even opens) — WebKit on iOS Chrome can otherwise refuse the
+    // geolocation prompt if it's requested only after handleFileChange's async code runs,
+    // by which point the original gesture context has expired. Speculative/best-effort:
+    // fired on every click regardless of whether the resulting file will actually need it.
+    pendingPositionRef.current = getCurrentPosition().catch(() => null)
   }
 
   function handleWebcamCapture(capturedFile: File) {
@@ -124,13 +134,15 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
       // photo" file-input option), which typically has no EXIF GPS to extract — silently try
       // the browser's live position instead, matching mobile's camera-capture behavior. Never
       // surfaces an error here (unlike the explicit "Ma position" button): if it fails, the
-      // fields just stay empty, exactly as they already do today.
-      try {
-        const position = await getCurrentPosition()
+      // fields just stay empty, exactly as they already do today. Uses the promise kicked off
+      // from the original click on the file input (see handlePhotoInputInteraction), rather
+      // than requesting geolocation fresh here — already-async here, past the direct user
+      // gesture WebKit expects on iOS Chrome.
+      const position = await pendingPositionRef.current
+      pendingPositionRef.current = null
+      if (position) {
         setLatitude(String(position.coords.latitude))
         setLongitude(String(position.coords.longitude))
-      } catch {
-        // best-effort only, ignore
       }
     }
 
@@ -213,6 +225,7 @@ export function PhotoJournal({ tripId, currentUserId, canDeleteAnyPhoto }: Photo
               // DocumentPicker-based "Importer un fichier"). Left untouched everywhere else.
               accept={isAndroid() ? undefined : 'image/*'}
               ref={fileInputRef}
+              onClick={handlePhotoInputInteraction}
               onChange={(event) => void handleFileChange(event)}
             />
             <WebcamCapture onCapture={handleWebcamCapture} />

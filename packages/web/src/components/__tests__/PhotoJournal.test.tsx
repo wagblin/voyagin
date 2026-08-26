@@ -212,6 +212,10 @@ describe('PhotoJournal', () => {
     renderPhotoJournal()
 
     const fileInput = await screen.findByLabelText('Photo')
+    // Real user flow: clicking/tapping the file input (a direct user gesture) happens before
+    // the native camera/picker UI opens and the file eventually comes back via `change`.
+    // The geolocation request is kicked off on that click, in parallel with the picker.
+    fireEvent.click(fileInput)
     fireEvent.change(fileInput, { target: { files: [samplePhotoFile()] } })
 
     await waitFor(() => {
