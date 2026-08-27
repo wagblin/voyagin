@@ -32,11 +32,6 @@ export interface UpdateTripInput {
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
-export async function listTrips(): Promise<Trip[]> {
-  const response = await authorizedFetch('/api/trips');
-  return (await response.json()) as Trip[];
-}
-
 export async function getTrip(id: string): Promise<Trip> {
   const response = await authorizedFetch(`/api/trips/${id}`);
   return (await response.json()) as Trip;

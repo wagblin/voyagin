@@ -14,6 +14,7 @@ const jwtSecret = process.env['JWT_SECRET'];
 if (!jwtSecret) {
   throw new Error('JWT_SECRET environment variable is required.');
 }
+const powerSyncJwtKid = process.env['POWERSYNC_JWT_KID'];
 
 const cloudinaryCloudName = process.env['CLOUDINARY_CLOUD_NAME'];
 const cloudinaryApiKey = process.env['CLOUDINARY_API_KEY'];
@@ -28,7 +29,7 @@ const app = buildApp({
   tripRepository: new PrismaTripRepository(prismaClient),
   userRepository: new PrismaUserRepository(prismaClient),
   passwordHasher: new BcryptPasswordHasher(),
-  tokenService: new JwtTokenService(jwtSecret),
+  tokenService: new JwtTokenService(jwtSecret, undefined, powerSyncJwtKid),
   tokenBlocklist: new TokenBlocklist(),
   photoRepository: new PrismaPhotoRepository(prismaClient),
   imageUploader: new CloudinaryImageUploader({

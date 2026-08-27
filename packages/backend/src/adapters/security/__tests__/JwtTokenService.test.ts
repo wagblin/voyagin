@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { JwtTokenService } from '../JwtTokenService';
 
 describe('JwtTokenService', () => {
@@ -16,5 +17,18 @@ describe('JwtTokenService', () => {
     const other = new JwtTokenService('other-secret');
     const token = other.issue('user-1');
     expect(service.verify(token)).toBeNull();
+  });
+
+  it('stamps issued tokens with the "voyagin-backend" key id by default, so PowerSync Cloud can match them against its configured signing key', () => {
+    const token = service.issue('user-1');
+    const decoded = jwt.decode(token, { complete: true });
+    expect(decoded?.header.kid).toBe('voyagin-backend');
+  });
+
+  it('stamps issued tokens with a caller-provided key id, for environments that configure a different PowerSync signing key', () => {
+    const withCustomKid = new JwtTokenService('test-secret', '7d', 'some-other-kid');
+    const token = withCustomKid.issue('user-1');
+    const decoded = jwt.decode(token, { complete: true });
+    expect(decoded?.header.kid).toBe('some-other-kid');
   });
 });

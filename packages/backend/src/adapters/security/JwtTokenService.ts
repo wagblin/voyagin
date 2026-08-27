@@ -8,11 +8,13 @@ export class JwtTokenService {
   constructor(
     private readonly secret: string,
     private readonly expiresIn: string = '7d',
+    private readonly kid: string = 'voyagin-backend',
   ) {}
 
   issue(userId: string): string {
     return jwt.sign({ sub: userId }, this.secret, {
       expiresIn: this.expiresIn as NonNullable<jwt.SignOptions['expiresIn']>,
+      header: { alg: 'HS256', kid: this.kid },
     });
   }
 

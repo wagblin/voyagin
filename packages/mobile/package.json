@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@azure/core-asynciterator-polyfill": "^1.0.2",
+    "@op-engineering/op-sqlite": "^17.2.0",
+    "@powersync/common": "^2.1.0",
+    "@powersync/react": "^2.0.0",
+    "@powersync/react-native": "^2.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@tanstack/react-query": "^5.101.4",
@@ -19,6 +24,7 @@
     "react-native-maps": "1.20.1"
   },
   "devDependencies": {
+    "@babel/plugin-transform-async-generator-functions": "^7.29.7",
     "@types/jest": "^29.5.14",
     "@types/node": "^26.2.0",
     "@types/piexifjs": "^1.0.0",

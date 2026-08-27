@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-import { useCreateTripMutation, useTripsQuery } from '../hooks/useTrips';
+import { useCreateTripMutation } from '../hooks/useTrips';
+import { useOfflineTrips } from '../hooks/useOfflineTrips';
 import type { Trip } from '../lib/tripsApi';
 
 export interface TripsListScreenProps {
@@ -11,7 +12,7 @@ export interface TripsListScreenProps {
 
 export function TripsListScreen({ onSelectTrip, onOpenAccount }: TripsListScreenProps) {
   const { user, logout } = useAuth();
-  const tripsQuery = useTripsQuery();
+  const { trips, isLoading: isLoadingTrips } = useOfflineTrips();
   const createTripMutation = useCreateTripMutation();
   const [newTripName, setNewTripName] = useState('');
 
@@ -65,12 +66,11 @@ export function TripsListScreen({ onSelectTrip, onOpenAccount }: TripsListScreen
       </View>
       {createTripMutation.isError ? <Text style={styles.error}>{createTripMutation.error.message}</Text> : null}
 
-      {tripsQuery.isPending ? <ActivityIndicator style={styles.loading} /> : null}
-      {tripsQuery.isError ? <Text style={styles.error}>{tripsQuery.error.message}</Text> : null}
-
-      {tripsQuery.data ? (
+      {isLoadingTrips ? (
+        <ActivityIndicator style={styles.loading} />
+      ) : (
         <FlatList
-          data={tripsQuery.data}
+          data={trips}
           keyExtractor={(trip) => trip.id}
           renderItem={({ item }: { item: Trip }) => (
             <TouchableOpacity style={styles.tripItem} onPress={() => onSelectTrip(item.id)}>
@@ -80,7 +80,7 @@ export function TripsListScreen({ onSelectTrip, onOpenAccount }: TripsListScreen
           )}
           ListEmptyComponent={<Text style={styles.emptyText}>Aucun voyage pour le moment.</Text>}
         />
-      ) : null}
+      )}
     </View>
   );
 }

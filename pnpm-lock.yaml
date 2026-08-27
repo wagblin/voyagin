@@ -123,6 +123,21 @@ importers:
 
   packages/mobile:
     dependencies:
+      '@azure/core-asynciterator-polyfill':
+        specifier: ^1.0.2
+        version: 1.0.2
+      '@op-engineering/op-sqlite':
+        specifier: ^17.2.0
+        version: 17.2.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      '@powersync/common':
+        specifier: ^2.1.0
+        version: 2.1.0
+      '@powersync/react':
+        specifier: ^2.0.0
+        version: 2.0.0(@powersync/common@2.1.0)(react@19.1.0)
+      '@powersync/react-native':
+        specifier: ^2.1.0
+        version: 2.1.0(@op-engineering/op-sqlite@17.2.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(@powersync/common@2.1.0)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))
@@ -166,6 +181,9 @@ importers:
         specifier: 1.20.1
         version: 1.20.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
     devDependencies:
+      '@babel/plugin-transform-async-generator-functions':
+        specifier: ^7.29.7
+        version: 7.29.7(@babel/core@7.29.7)
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -333,6 +351,10 @@ packages:
   '@asamuzakjp/dom-selector@8.3.2':
     resolution: {integrity: sha512-93Z1N+BQNXysodoicpOIyNh2drHfz/CTf9nnT0FEx72GJcIiwgydD7tGAr78j41LsYn3hlRn+LdGPuBLn1Bl8Q==}
     engines: {node: ^22.13.0 || >=24.0.0}
+
+  '@azure/core-asynciterator-polyfill@1.0.2':
+    resolution: {integrity: sha512-3rkP4LnnlWawl0LZptJOdXNrT/fHp2eQMadoasa6afspXdpGrtPZuAQc2PD0cpgyuoXtUWyC3tv7xfntjGS5Dw==}
+    engines: {node: '>=12.0.0'}
 
   '@babel/code-frame@7.10.4':
     resolution: {integrity: sha512-vG6SvB6oYEhvgisZNFRmRCUkLz11c7rp+tbNTynGqc6mS1d5ATd/sGyV6W0KZZnXRKMTzZDRgQT3Ou9jhpAfUg==}
@@ -1236,11 +1258,43 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
+  '@op-engineering/op-sqlite@17.2.0':
+    resolution: {integrity: sha512-TmJSf83WGVZQ13RoYf+5oUrM2v7AenjifXeVwmyOqgXZaDL/dfnQDaVioD+3v8VH9syki3iyAI/fGUCZkJ3yYg==}
+    peerDependencies:
+      '@sqlite.org/sqlite-wasm': '*'
+      react: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      '@sqlite.org/sqlite-wasm':
+        optional: true
+
   '@oxc-project/types@0.144.0':
     resolution: {integrity: sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==}
 
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
+
+  '@powersync/common@2.1.0':
+    resolution: {integrity: sha512-9TbmpTVJ22TA4ZQjfrRR/YkGzMuaNRnPHwT613efp/Sch0jbLhW6kObLmwp0nStUkRqAHSuNHwfclR4wyjvPpQ==}
+
+  '@powersync/react-native@2.1.0':
+    resolution: {integrity: sha512-IMpCgExjA9AwrJXa9FZ0iraD8AZlmu0pqq0riwow3pZiJV+V+MfrS1oJmXMcrexJfQYI4Mrg6kdbLiRfqp79WQ==}
+    peerDependencies:
+      '@op-engineering/op-sqlite': ^17.1.0
+      '@powersync/common': ^2.1.0
+      react: '*'
+      react-native: '*'
+
+  '@powersync/react@2.0.0':
+    resolution: {integrity: sha512-HCIhyGRWOVjWOEyLfDhFCHhVmchtzNFIP0RKKjCsXiCr9pCfmuE5FHtI5LR5BdqgrVn0n0RcpH8LbGyxP8iVxg==}
+    peerDependencies:
+      '@powersync/common': ^2.0.0
+      react: '*'
+
+  '@powersync/shared-internals@1.1.1':
+    resolution: {integrity: sha512-EiYxTbqbD6lfpDERLyECBsORDfrrgLSf4nmQ35Ug4cUNKFBwO4tGPZaquGeXbr4O+uJk0QFE/f6+33MLCDurIA==}
+    peerDependencies:
+      '@powersync/common': 2.0.0
 
   '@prisma/client@5.22.0':
     resolution: {integrity: sha512-M0SVXfyHnQREBKxCgyo7sffrKttwE6R8PMq330MIUF0pTwjUhLbW84pFDlf06B27XyCR++VtjugEnIHdr07SVA==}
@@ -5889,6 +5943,8 @@ snapshots:
       lru-cache: 11.5.2
     optional: true
 
+  '@azure/core-asynciterator-polyfill@1.0.2': {}
+
   '@babel/code-frame@7.10.4':
     dependencies:
       '@babel/highlight': 7.25.9
@@ -7224,11 +7280,36 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
+  '@op-engineering/op-sqlite@17.2.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+
   '@oxc-project/types@0.144.0': {}
 
   '@paralleldrive/cuid2@2.3.1':
     dependencies:
       '@noble/hashes': 1.8.0
+
+  '@powersync/common@2.1.0': {}
+
+  '@powersync/react-native@2.1.0(@op-engineering/op-sqlite@17.2.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(@powersync/common@2.1.0)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@op-engineering/op-sqlite': 17.2.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      '@powersync/common': 2.1.0
+      '@powersync/react': 2.0.0(@powersync/common@2.1.0)(react@19.1.0)
+      '@powersync/shared-internals': 1.1.1(@powersync/common@2.1.0)
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
+
+  '@powersync/react@2.0.0(@powersync/common@2.1.0)(react@19.1.0)':
+    dependencies:
+      '@powersync/common': 2.1.0
+      react: 19.1.0
+
+  '@powersync/shared-internals@1.1.1(@powersync/common@2.1.0)':
+    dependencies:
+      '@powersync/common': 2.1.0
 
   '@prisma/client@5.22.0(prisma@5.22.0)':
     optionalDependencies:

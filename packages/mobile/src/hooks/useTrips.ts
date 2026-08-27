@@ -10,7 +10,6 @@ import {
   createTrip,
   deleteTrip,
   getTrip,
-  listTrips,
   removeParticipant,
   updateTrip,
   type CreateTripInput,
@@ -20,10 +19,6 @@ import {
 
 const tripsQueryKey = ['trips'] as const;
 const tripQueryKey = (id: string) => ['trips', id] as const;
-
-export function useTripsQuery(): UseQueryResult<Trip[]> {
-  return useQuery({ queryKey: tripsQueryKey, queryFn: listTrips });
-}
 
 export function useTripQuery(id: string): UseQueryResult<Trip> {
   return useQuery({ queryKey: tripQueryKey(id), queryFn: () => getTrip(id) });

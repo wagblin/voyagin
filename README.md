@@ -22,6 +22,7 @@ Carnet de voyage collaboratif en temps réel. **« Le In compte »** : VoyagIn c
 | Validation | Zod |
 | Auth | JWT |
 | Stockage images | Cloudinary |
+| Hors-ligne (mobile) | PowerSync (lecture seule pour l'instant) |
 | Cartographie | Leaflet (web) + react-native-maps (mobile) |
 | Tests | Jest / Vitest (+ Supertest côté backend) |
 | Langage | TypeScript strict partout |
@@ -83,6 +84,7 @@ Fonctionnalités actuelles :
 - **Voyages** : création, consultation, modification, suppression, gestion des participants (ajout/retrait) — réservée à l'organisateur du voyage.
 - **Carnet photo avec géolocalisation optionnelle** : ajout d'une photo (avec horodatage) à un voyage — réservé aux participants ; liste et suppression (auteur de la photo ou organisateur du voyage) ; affichage sur une carte interactive (web et mobile) avec tracé chronologique reliant les positions connues, dans l'ordre de prise de vue. La photo peut venir de l'appareil photo arrière (« Prendre une photo »), de l'appareil photo avant pour un selfie (« Prendre un selfie » — `getUserMedia` sur web, `expo-image-picker` en mode caméra frontale sur mobile), de la bibliothèque (web toujours ; mobile sur iOS uniquement — sur Android ce sélecteur ne récupère jamais la position GPS, une limitation système documentée dans `CLAUDE.md`), ou — sur mobile uniquement — d'un fichier importé depuis le sélecteur système (Fichiers/iCloud Drive/Drive, fonctionne sur Android comme sur iOS). Pour la bibliothèque et l'import de fichier, la position est extraite automatiquement des métadonnées EXIF si présentes ; sinon elle peut être saisie manuellement, ou laissée vide — la géolocalisation n'est jamais obligatoire pour ajouter une photo. Latitude/longitude toujours modifiables avant l'envoi.
 - **Saisie des dates** : sur web, champs natifs du navigateur (`<input type="date">`/`datetime-local`). Sur mobile, sélecteur de date natif (`@react-native-community/datetimepicker`) pour les dates de début/fin d'un voyage et la date de prise de vue d'une photo — plus fiable qu'une saisie en texte libre.
+- **Hors-ligne (mobile, lecture seule)** : la liste des voyages reste consultable sans connexion via [PowerSync](https://www.powersync.com/) — une base SQLite locale synchronisée automatiquement (`useOfflineTrips`, tables `trips`/`participants`). Ce premier slice est strictement en lecture ; créer/modifier/supprimer un voyage nécessite toujours d'être en ligne (passe par l'API REST). Nécessite un build natif (Xcode/Android Studio) — ne fonctionne pas dans Expo Go.
 
 ## Déploiement
 

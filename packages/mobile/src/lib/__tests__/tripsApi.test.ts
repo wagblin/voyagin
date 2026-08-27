@@ -1,5 +1,4 @@
 import {
-  listTrips,
   getTrip,
   createTrip,
   updateTrip,
@@ -27,20 +26,6 @@ const sampleTrip: Trip = {
 describe('tripsApi', () => {
   afterEach(() => {
     jest.restoreAllMocks();
-  });
-
-  describe('listTrips', () => {
-    it('resolves with the list of trips', async () => {
-      mockFetchOnce({ ok: true, json: () => Promise.resolve([sampleTrip]) });
-
-      await expect(listTrips()).resolves.toEqual([sampleTrip]);
-    });
-
-    it('throws when the API responds with an error', async () => {
-      mockFetchOnce({ ok: false, status: 401, json: () => Promise.resolve({ error: 'Unauthorized' }) });
-
-      await expect(listTrips()).rejects.toThrow('Unauthorized');
-    });
   });
 
   describe('getTrip', () => {
