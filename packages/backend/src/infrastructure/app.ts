@@ -9,6 +9,7 @@ import { buildUserRoutes } from '../adapters/http/userRoutes';
 import { buildPhotoRoutes } from '../adapters/http/photoRoutes';
 import { errorHandler } from '../adapters/http/errorHandler';
 import { JwtTokenService } from '../adapters/security/JwtTokenService';
+import { PowerSyncTokenService } from '../adapters/security/PowerSyncTokenService';
 import { TokenBlocklist } from '../adapters/security/TokenBlocklist';
 import type { ImageUploader } from '../adapters/storage/ImageUploader';
 import { swaggerSpec } from './swagger';
@@ -19,6 +20,7 @@ export interface AppDependencies {
   passwordHasher: PasswordHasher;
   tokenService: JwtTokenService;
   tokenBlocklist: TokenBlocklist;
+  powerSyncTokenService: PowerSyncTokenService;
   photoRepository: PhotoRepository;
   imageUploader: ImageUploader;
 }

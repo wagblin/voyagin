@@ -5,6 +5,7 @@ import { PrismaUserRepository } from '../adapters/persistence/PrismaUserReposito
 import { PrismaPhotoRepository } from '../adapters/persistence/PrismaPhotoRepository';
 import { BcryptPasswordHasher } from '../adapters/security/BcryptPasswordHasher';
 import { JwtTokenService } from '../adapters/security/JwtTokenService';
+import { PowerSyncTokenService } from '../adapters/security/PowerSyncTokenService';
 import { TokenBlocklist } from '../adapters/security/TokenBlocklist';
 import { CloudinaryImageUploader } from '../adapters/storage/CloudinaryImageUploader';
 
@@ -15,6 +16,12 @@ if (!jwtSecret) {
   throw new Error('JWT_SECRET environment variable is required.');
 }
 const powerSyncJwtKid = process.env['POWERSYNC_JWT_KID'];
+const powerSyncInstanceUrl = process.env['POWERSYNC_INSTANCE_URL'];
+if (!powerSyncInstanceUrl) {
+  throw new Error(
+    'POWERSYNC_INSTANCE_URL environment variable is required (the "aud" claim PowerSync Cloud expects on its dedicated sync tokens).',
+  );
+}
 
 const cloudinaryCloudName = process.env['CLOUDINARY_CLOUD_NAME'];
 const cloudinaryApiKey = process.env['CLOUDINARY_API_KEY'];
@@ -31,6 +38,7 @@ const app = buildApp({
   passwordHasher: new BcryptPasswordHasher(),
   tokenService: new JwtTokenService(jwtSecret, undefined, powerSyncJwtKid),
   tokenBlocklist: new TokenBlocklist(),
+  powerSyncTokenService: new PowerSyncTokenService(jwtSecret, powerSyncInstanceUrl, powerSyncJwtKid),
   photoRepository: new PrismaPhotoRepository(prismaClient),
   imageUploader: new CloudinaryImageUploader({
     cloudName: cloudinaryCloudName,

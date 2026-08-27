@@ -1,5 +1,6 @@
 import request from 'supertest';
-import { buildTestApp } from '../testHelpers/testApp';
+import jwt from 'jsonwebtoken';
+import { buildTestApp, TEST_POWERSYNC_INSTANCE_URL } from '../testHelpers/testApp';
 
 describe('POST /api/auth/register', () => {
   it('registers a new user and returns a token', async () => {
@@ -103,5 +104,54 @@ describe('POST /api/auth/logout', () => {
     const app = buildTestApp();
     const response = await request(app).post('/api/auth/logout');
     expect(response.status).toBe(401);
+  });
+});
+
+describe('POST /api/auth/powersync-token', () => {
+  it('rejects a request without a valid session token', async () => {
+    const app = buildTestApp();
+
+    const response = await request(app).post('/api/auth/powersync-token');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('issues a PowerSync-scoped token for the authenticated user, with the instance URL as audience', async () => {
+    const app = buildTestApp();
+    const registerResponse = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'alex@example.com', name: 'Alex', password: 'correct horse' });
+    const sessionToken = registerResponse.body.token as string;
+    const userId = registerResponse.body.user.id as string;
+
+    const response = await request(app)
+      .post('/api/auth/powersync-token')
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.token).toEqual(expect.any(String));
+
+    const decoded = jwt.decode(response.body.token as string, { complete: true });
+    expect(decoded?.payload).toMatchObject({ sub: userId, aud: TEST_POWERSYNC_INSTANCE_URL });
+  });
+
+  it('issues a PowerSync token whose lifetime stays well under the 7-day session token lifetime', async () => {
+    const app = buildTestApp();
+    const registerResponse = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'alex@example.com', name: 'Alex', password: 'correct horse' });
+    const sessionToken = registerResponse.body.token as string;
+
+    const response = await request(app)
+      .post('/api/auth/powersync-token')
+      .set('Authorization', `Bearer ${sessionToken}`);
+
+    const sessionPayload = jwt.decode(sessionToken) as jwt.JwtPayload;
+    const powerSyncPayload = jwt.decode(response.body.token as string) as jwt.JwtPayload;
+    const powerSyncLifetime = (powerSyncPayload.exp as number) - (powerSyncPayload.iat as number);
+    const sessionLifetime = (sessionPayload.exp as number) - (sessionPayload.iat as number);
+
+    expect(powerSyncLifetime).toBeLessThanOrEqual(60 * 60);
+    expect(powerSyncLifetime).toBeLessThan(sessionLifetime);
   });
 });

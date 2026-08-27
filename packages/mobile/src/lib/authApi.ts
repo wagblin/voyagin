@@ -65,3 +65,8 @@ export async function updateMe(input: UpdateMeInput): Promise<AuthUser> {
 export async function deleteMe(): Promise<void> {
   await authorizedFetch('/api/users/me', { method: 'DELETE' });
 }
+
+export async function fetchPowerSyncToken(): Promise<{ token: string }> {
+  const response = await authorizedFetch('/api/auth/powersync-token', { method: 'POST' });
+  return (await response.json()) as { token: string };
+}

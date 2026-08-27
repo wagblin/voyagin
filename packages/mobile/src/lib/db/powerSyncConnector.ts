@@ -1,16 +1,22 @@
 import { type CommonPowerSyncDatabase, type PowerSyncBackendConnector } from '@powersync/react-native';
 import { getToken } from '../authStorage';
+import { fetchPowerSyncToken } from '../authApi';
 import { describeUnexpectedLocalWrite } from '../powerSyncLocalWriteGuard';
 
 const POWERSYNC_ENDPOINT = 'https://6a90523c02481fb31b918cee.powersync.journeyapps.com';
 
 export class PowerSyncConnector implements PowerSyncBackendConnector {
   async fetchCredentials() {
-    const token = await getToken();
-    if (token === null) {
+    const sessionToken = await getToken();
+    if (sessionToken === null) {
       return null; // SDK contract: return null when unauthenticated, don't throw
     }
-    return { endpoint: POWERSYNC_ENDPOINT, token };
+    try {
+      const { token } = await fetchPowerSyncToken();
+      return { endpoint: POWERSYNC_ENDPOINT, token };
+    } catch {
+      return null; // SDK contract: return null when credentials can't be obtained, don't throw
+    }
   }
 
   async uploadData(database: CommonPowerSyncDatabase): Promise<void> {

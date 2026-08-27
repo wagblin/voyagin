@@ -7,6 +7,7 @@ import {
   UserRepository,
 } from '@voyagin/domain';
 import { JwtTokenService } from '../security/JwtTokenService';
+import { PowerSyncTokenService } from '../security/PowerSyncTokenService';
 import { TokenBlocklist } from '../security/TokenBlocklist';
 import { asyncHandler } from './asyncHandler';
 import { serializeUser } from './serializers';
@@ -27,6 +28,7 @@ export interface AuthControllerDependencies {
   passwordHasher: PasswordHasher;
   tokenService: JwtTokenService;
   tokenBlocklist: TokenBlocklist;
+  powerSyncTokenService: PowerSyncTokenService;
 }
 
 export function buildAuthController(deps: AuthControllerDependencies) {
@@ -72,5 +74,10 @@ export function buildAuthController(deps: AuthControllerDependencies) {
     res.status(204).send();
   };
 
-  return { register, login, logout };
+  const issuePowerSyncToken = (req: Request, res: Response): void => {
+    const token = deps.powerSyncTokenService.issue(req.userId as string);
+    res.status(200).json({ token });
+  };
+
+  return { register, login, logout, issuePowerSyncToken };
 }

@@ -1,4 +1,4 @@
-import { register, login, logout, updateMe, deleteMe } from '../authApi';
+import { register, login, logout, updateMe, deleteMe, fetchPowerSyncToken } from '../authApi';
 
 jest.mock('../authStorage', () => ({
   getToken: jest.fn().mockResolvedValue('test-token'),
@@ -87,6 +87,20 @@ describe('authApi', () => {
       mockFetchOnce({ ok: false, status: 401, json: () => Promise.resolve({ error: 'Unauthorized' }) });
 
       await expect(deleteMe()).rejects.toThrow('Unauthorized');
+    });
+  });
+
+  describe('fetchPowerSyncToken', () => {
+    it('resolves with a short-lived PowerSync-scoped token, exchanged for the current session token', async () => {
+      mockFetchOnce({ ok: true, json: () => Promise.resolve({ token: 'powersync-scoped-token' }) });
+
+      await expect(fetchPowerSyncToken()).resolves.toEqual({ token: 'powersync-scoped-token' });
+    });
+
+    it('throws when the API rejects the exchange (expired or invalid session token)', async () => {
+      mockFetchOnce({ ok: false, status: 401, json: () => Promise.resolve({ error: 'Invalid or expired token.' }) });
+
+      await expect(fetchPowerSyncToken()).rejects.toThrow('Invalid or expired token.');
     });
   });
 });

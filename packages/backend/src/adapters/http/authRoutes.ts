@@ -93,5 +93,33 @@ export function buildAuthRoutes(deps: AuthControllerDependencies): Router {
     controller.logout,
   );
 
+  /**
+   * @openapi
+   * /auth/powersync-token:
+   *   post:
+   *     summary: Échange le token de session contre un token PowerSync dédié, à courte durée de vie.
+   *     description: >
+   *       PowerSync Cloud exige un JWT avec une revendication "aud" (l'URL de l'instance PowerSync) et
+   *       un écart maximum de 24h entre "iat" et "exp". Le token de session normal (7 jours) ne convient
+   *       donc pas tel quel : cet endpoint en émet un second, dédié, avec une durée de vie courte.
+   *     tags: [Auth]
+   *     security: [{ bearerAuth: [] }]
+   *     responses:
+   *       200:
+   *         description: Token PowerSync émis.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 token: { type: string }
+   *       401: { description: Non authentifié. }
+   */
+  router.post(
+    '/auth/powersync-token',
+    requireAuth(deps.tokenService, deps.tokenBlocklist),
+    controller.issuePowerSyncToken,
+  );
+
   return router;
 }
